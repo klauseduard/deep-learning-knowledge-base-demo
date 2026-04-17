@@ -14,6 +14,8 @@ The result combines:
 
 ## Demo scope
 
+Most of the full knowledge base content has been removed from this public repository. A knowledge base built this way is inherently personal — shaped by one learner's questions, gaps, and interests — and publishing it as a reference would misrepresent its purpose. What remains here is enough to demonstrate the *approach*: the article format, the teaching materials, and how they connect.
+
 **5 fully developed concept articles** demonstrate the article format and editorial approach:
 
 | Article | Description |
