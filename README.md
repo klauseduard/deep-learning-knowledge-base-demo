@@ -1,16 +1,16 @@
 # Deep Learning Knowledge Base — Demo
 
-A demonstration of a structured, interlinked knowledge base for deep learning, with interactive teaching materials that complement concept articles.
+A demonstration of building a structured knowledge base and interactive teaching materials using [Claude Code](https://claude.ai/code), with deep learning as the subject matter.
 
 ## What this is
 
-This repository showcases an approach to building a personal learning resource for a complex technical domain. It combines:
+This repository demonstrates a workflow for learning a complex technical domain with an LLM as a collaborator. The knowledge base started as AI-generated drafts seeded from François Fleuret's *The Little Book of Deep Learning* (2023), then improved through iterative review — the learner reads the articles, asks questions about what's unclear or missing, and the material gets refined or expanded in response. Interactive teaching materials emerged from this process: each one was prompted by a genuine question ("I forgot the math — show me with real numbers", "what happens when I stack 20 sigmoid layers?") rather than planned upfront.
+
+The result combines:
 
 - **Concept articles** — structured markdown files covering deep learning topics, interlinked with wiki-style `[[references]]`
 - **Interactive teaching materials** — standalone HTML pages with step-by-step math walkthroughs, interactive simulations, and explorable visualizations
 - **Reference materials** — glossary, notation guide, timeline, and key people for quick lookup
-
-The knowledge base was seeded from François Fleuret's *The Little Book of Deep Learning* (2023) and expanded through iterative review, with articles cross-referencing each other to build a connected understanding.
 
 ## Demo scope
 
