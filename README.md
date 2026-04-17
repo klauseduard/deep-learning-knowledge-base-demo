@@ -8,6 +8,41 @@ This repository demonstrates a workflow for learning a complex technical domain 
 
 Most content has been removed from this public repository. A knowledge base built this way is inherently personal — shaped by one learner's questions, gaps, and interests — and publishing it as a reference would misrepresent its purpose. Additionally, the LLM can generate draft articles far faster than a person can engage with them, so much of the initial material hasn't been reviewed or refined yet. What remains here is enough to demonstrate the *approach*: the article format, the teaching materials, and how they connect.
 
+```mermaid
+flowchart LR
+    subgraph seed ["1. Seed"]
+        S[Source material<br><i>book, paper, topic</i>]
+    end
+
+    subgraph generate ["2. Generate"]
+        G[LLM drafts<br>concept articles]
+    end
+
+    subgraph learn ["3. Learn"]
+        L[Learner reads<br>and questions]
+    end
+
+    subgraph refine ["4. Refine"]
+        direction TB
+        R1[Clarify jargon<br>add links]
+        R2[Add worked<br>examples]
+        R3[Generate teaching<br>material]
+        R4[Create reference<br>entries]
+    end
+
+    S --> G --> L
+    L -- "unclear term" --> R1
+    L -- "forgot the math" --> R2
+    L -- "show me interactively" --> R3
+    L -- "what does this symbol mean?" --> R4
+    R1 & R2 & R3 & R4 -- improved article --> L
+
+    style seed fill:#f5f3ef,stroke:#e2ddd5
+    style generate fill:#e8f0f8,stroke:#3d6b9e
+    style learn fill:#fef6e8,stroke:#b87a1a
+    style refine fill:#e8f5ec,stroke:#27864a
+```
+
 The result combines:
 
 - **Concept articles** — structured markdown files covering deep learning topics, interlinked with wiki-style `[[references]]`
