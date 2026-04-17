@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Activation Function Explorer</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    --bg: #fafaf8;
+    --surface: #ffffff;
+    --surface-alt: #f5f3ef;
+    --border: #e2ddd5;
+    --text: #2c2825;
+    --text-secondary: #6b6560;
+    --text-tertiary: #9a948e;
+    --accent: #3d6b9e;
+    --accent-light: #e8f0f8;
+    --success: #27864a;
+    --success-light: #e8f5ec;
+    --danger: #c0392b;
+    --danger-light: #fdeaea;
+    --warning: #b87a1a;
+    --warning-light: #fef6e8;
+    --purple: #7b5ea7;
+    --purple-light: #f0ebf5;
+    --teal: #1a7a7a;
+    --teal-light: #e6f4f4;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    grid-template-rows: auto 1fr;
+    height: 100vh;
+    overflow: hidden;
+}
+
+header {
+    grid-column: 1 / -1;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+}
+
+header h1 { font-family: 'Source Serif 4', serif; font-size: 1.4rem; margin-bottom: 0.15rem; }
+header .subtitle { color: var(--text-secondary); font-size: 0.85rem; }
+
+/* Sidebar */
+.sidebar {
+    padding: 1rem;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    overflow-y: auto;
+}
+
+.control-group { margin-bottom: 1.25rem; }
+.control-group-title {
+    font-family: 'Source Serif 4', serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.6rem;
+}
+
+.act-btn {
+    display: block;
+    width: 100%;
+    padding: 0.4rem 0.65rem;
+    margin-bottom: 0.3rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    border: 2px solid var(--border);
+    border-radius: 5px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.12s;
+}
+.act-btn:hover { background: var(--surface-alt); }
+.act-btn.selected { border-color: var(--accent); background: var(--accent-light); }
+.act-btn .act-name { font-weight: 600; }
+.act-btn .act-formula { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--text-tertiary); }
+
+.compare-btn {
+    display: block;
+    width: 100%;
+    padding: 0.4rem 0.65rem;
+    margin-bottom: 0.3rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    border: 2px solid var(--border);
+    border-radius: 5px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.12s;
+}
+.compare-btn:hover { background: var(--surface-alt); }
+.compare-btn.active { border-color: var(--purple); background: var(--purple-light); }
+
+.control-row { margin-bottom: 0.5rem; }
+.control-row label { display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.15rem; }
+.slider-line { display: flex; align-items: center; gap: 0.5rem; }
+.slider-line input[type="range"] { flex: 1; accent-color: var(--accent); }
+.slider-line .val { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; min-width: 28px; text-align: right; font-weight: 500; }
+
+.hint {
+    background: var(--accent-light);
+    border-left: 3px solid var(--accent);
+    padding: 0.6rem 0.75rem;
+    margin: 0.75rem 0;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+.hint::before { content: "What to notice: "; font-weight: 600; color: var(--accent); }
+
+/* Main */
+.main {
+    padding: 1rem 1.5rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.85rem;
+    background: var(--surface-alt);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+}
+.panel-title { font-family: 'Source Serif 4', serif; font-weight: 600; }
+.panel-subtitle { color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; }
+
+.panel canvas { display: block; width: 100%; max-width: 700px; margin: 0 auto; cursor: crosshair; }
+
+/* Readout strip */
+.readout {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem;
+    padding: 0.6rem 0.85rem;
+    border-top: 1px solid var(--border);
+    background: var(--surface-alt);
+}
+.readout-item { text-align: center; }
+.readout-item .ro-label { font-size: 0.7rem; color: var(--text-tertiary); }
+.readout-item .ro-value { font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; font-weight: 500; }
+
+/* Stacking panel */
+.stack-info {
+    padding: 0.6rem 0.85rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    background: var(--surface-alt);
+}
+</style>
+</head>
+<body>
+
+<header>
+    <h1>Activation Function Explorer</h1>
+    <div class="subtitle">Drag along the curve. Stack layers. Compare functions side by side.</div>
+</header>
+
+<div class="sidebar">
+    <div class="control-group">
+        <div class="control-group-title">Activation Function</div>
+        <div id="act-buttons"></div>
+    </div>
+
+    <div class="control-group">
+        <div class="control-group-title">Compare with</div>
+        <div id="compare-buttons"></div>
+    </div>
+
+    <div class="control-group">
+        <div class="control-group-title">Layer Stacking</div>
+        <div class="control-row">
+            <label>Layers (apply activation repeatedly)</label>
+            <div class="slider-line">
+                <input type="range" id="num-layers" min="1" max="30" value="1">
+                <span class="val" id="num-layers-val">1</span>
+            </div>
+        </div>
+        <div class="hint" id="stack-hint">Set layers > 1 to see what happens when a signal passes through repeated activations. Sigmoid crushes everything; ReLU preserves or kills.</div>
+    </div>
+
+    <div class="control-group">
+        <div class="control-group-title">Leaky ReLU slope</div>
+        <div class="control-row">
+            <div class="slider-line">
+                <input type="range" id="leaky-alpha" min="0.001" max="0.3" step="0.001" value="0.1">
+                <span class="val" id="leaky-alpha-val">0.10</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="main">
+    <!-- Function + Derivative panel -->
+    <div class="panel">
+        <div class="panel-header">
+            <span class="panel-title" id="fn-panel-title">ReLU: function and derivative</span>
+            <span class="panel-subtitle" id="fn-panel-sub">drag to probe</span>
+        </div>
+        <canvas id="fn-canvas" height="360"></canvas>
+        <div class="readout" id="fn-readout">
+            <div class="readout-item"><div class="ro-label">$x$</div><div class="ro-value" id="ro-x">—</div></div>
+            <div class="readout-item"><div class="ro-label">$f(x)$</div><div class="ro-value" id="ro-fx">—</div></div>
+            <div class="readout-item"><div class="ro-label">$f'(x)$</div><div class="ro-value" id="ro-dfx">—</div></div>
+            <div class="readout-item"><div class="ro-label">gradient fate</div><div class="ro-value" id="ro-fate">—</div></div>
+        </div>
+    </div>
+
+    <!-- Layer stacking panel -->
+    <div class="panel">
+        <div class="panel-header">
+            <span class="panel-title">Layer stacking: output after N repeated activations</span>
+            <span class="panel-subtitle" id="stack-panel-sub">input range [-3, 3]</span>
+        </div>
+        <canvas id="stack-canvas" height="300"></canvas>
+        <div class="stack-info" id="stack-info">1 layer — input passes through activation once.</div>
+    </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+// Activation function definitions
+// ══════════════════════════════════════════════════
+
+let leakyAlpha = 0.1;
+
+const ACT = {
+    relu: {
+        name: 'ReLU', formula: 'max(0, x)', color: '#2196F3',
+        fn: x => Math.max(0, x),
+        dfn: x => x > 0 ? 1 : 0,
+        desc: 'gradient is 1 or 0 — no attenuation, but dead for negative inputs'
+    },
+    leaky_relu: {
+        name: 'Leaky ReLU', formula: 'max(ax, x)', color: '#9C27B0',
+        fn: x => x >= 0 ? x : leakyAlpha * x,
+        dfn: x => x >= 0 ? 1 : leakyAlpha,
+        desc: 'small slope for negatives prevents dead neurons'
+    },
+    sigmoid: {
+        name: 'Sigmoid', formula: '1/(1+e^-x)', color: '#FF9800',
+        fn: x => 1 / (1 + Math.exp(-clamp(x))),
+        dfn: x => { const s = 1 / (1 + Math.exp(-clamp(x))); return s * (1 - s); },
+        desc: 'max derivative 0.25 — each layer shrinks gradient by at least 75%'
+    },
+    tanh: {
+        name: 'Tanh', formula: 'tanh(x)', color: '#4CAF50',
+        fn: x => Math.tanh(x),
+        dfn: x => 1 - Math.tanh(x) ** 2,
+        desc: 'max derivative 1.0 at x=0, but saturates for large |x|'
+    },
+    gelu: {
+        name: 'GELU', formula: 'x * Phi(x)', color: '#E91E63',
+        fn: x => x * phi(x),
+        dfn: x => phi(x) + x * phiPdf(x),
+        desc: 'smooth probabilistic gate — the Transformer default'
+    },
+    silu: {
+        name: 'SiLU / Swish', formula: 'x * sigmoid(x)', color: '#795548',
+        fn: x => { const s = 1 / (1 + Math.exp(-clamp(x))); return x * s; },
+        dfn: x => { const s = 1 / (1 + Math.exp(-clamp(x))); return s + x * s * (1 - s); },
+        desc: 'self-gated — similar to GELU, used in EfficientNet'
+    }
+};
+
+function clamp(x) { return Math.max(-500, Math.min(500, x)); }
+
+// Standard normal CDF and PDF (for GELU)
+function phi(x) {
+    // Approximation using error function
+    return 0.5 * (1 + erf(x / Math.SQRT2));
+}
+function phiPdf(x) {
+    return Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
+}
+function erf(x) {
+    const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
+    const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+    const sign = x < 0 ? -1 : 1;
+    x = Math.abs(x);
+    const t = 1 / (1 + p * x);
+    const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+    return sign * y;
+}
+
+// ══════════════════════════════════════════════════
+// State
+// ══════════════════════════════════════════════════
+
+let selectedAct = 'relu';
+let compareAct = null;
+let numLayers = 1;
+let probeX = null; // null = no probe
+
+// ══════════════════════════════════════════════════
+// UI setup
+// ══════════════════════════════════════════════════
+
+function buildButtons() {
+    const actContainer = document.getElementById('act-buttons');
+    const cmpContainer = document.getElementById('compare-buttons');
+
+    for (const [key, act] of Object.entries(ACT)) {
+        // Primary selection
+        const btn = document.createElement('button');
+        btn.className = 'act-btn' + (key === selectedAct ? ' selected' : '');
+        btn.innerHTML = `<span class="act-name" style="color:${act.color}">${act.name}</span><br><span class="act-formula">${act.formula}</span>`;
+        btn.dataset.key = key;
+        btn.addEventListener('click', () => {
+            selectedAct = key;
+            document.querySelectorAll('.act-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            // Deselect compare if same
+            if (compareAct === key) { compareAct = null; document.querySelectorAll('.compare-btn').forEach(b => b.classList.remove('active')); }
+            redraw();
+        });
+        actContainer.appendChild(btn);
+
+        // Compare selection
+        const cbtn = document.createElement('button');
+        cbtn.className = 'compare-btn';
+        cbtn.innerHTML = `<span style="color:${act.color}; font-weight:500;">${act.name}</span>`;
+        cbtn.dataset.key = key;
+        cbtn.addEventListener('click', () => {
+            if (compareAct === key) {
+                compareAct = null;
+                cbtn.classList.remove('active');
+            } else {
+                compareAct = key;
+                document.querySelectorAll('.compare-btn').forEach(b => b.classList.remove('active'));
+                cbtn.classList.add('active');
+            }
+            redraw();
+        });
+        cmpContainer.appendChild(cbtn);
+    }
+}
+
+// ══════════════════════════════════════════════════
+// Drawing: Function + Derivative
+// ══════════════════════════════════════════════════
+
+function drawFnPanel() {
+    const canvas = document.getElementById('fn-canvas');
+    const parent = canvas.parentElement;
+    canvas.width = Math.min(parent.clientWidth, 700);
+    const W = canvas.width, H = canvas.height;
+    const ctx = canvas.getContext('2d');
+
+    ctx.clearRect(0, 0, W, H);
+
+    const pad = { top: 15, bottom: 20, left: 50, right: 20 };
+    const plotW = W - pad.left - pad.right;
+    const plotH = H - pad.top - pad.bottom;
+
+    // x range: -5 to 5, y range: -2 to 4
+    const xMin = -4, xMax = 4, yMin = -1.5, yMax = 3;
+
+    function toCanvasX(x) { return pad.left + (x - xMin) / (xMax - xMin) * plotW; }
+    function toCanvasY(y) { return pad.top + (1 - (y - yMin) / (yMax - yMin)) * plotH; }
+    function fromCanvasX(cx) { return xMin + (cx - pad.left) / plotW * (xMax - xMin); }
+
+    // Grid
+    ctx.strokeStyle = '#eae6e0';
+    ctx.lineWidth = 1;
+    for (let x = Math.ceil(xMin); x <= xMax; x++) {
+        const cx = toCanvasX(x);
+        ctx.beginPath(); ctx.moveTo(cx, pad.top); ctx.lineTo(cx, H - pad.bottom); ctx.stroke();
+    }
+    for (let y = Math.ceil(yMin); y <= yMax; y++) {
+        const cy = toCanvasY(y);
+        ctx.beginPath(); ctx.moveTo(pad.left, cy); ctx.lineTo(W - pad.right, cy); ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = '#b0aaa2';
+    ctx.lineWidth = 1.5;
+    const zeroX = toCanvasX(0), zeroY = toCanvasY(0);
+    ctx.beginPath(); ctx.moveTo(pad.left, zeroY); ctx.lineTo(W - pad.right, zeroY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(zeroX, pad.top); ctx.lineTo(zeroX, H - pad.bottom); ctx.stroke();
+
+    // Axis labels
+    ctx.fillStyle = '#9a948e';
+    ctx.font = '10px "JetBrains Mono"';
+    ctx.textAlign = 'center';
+    for (let x = Math.ceil(xMin); x <= xMax; x++) {
+        if (x === 0) continue;
+        ctx.fillText(x, toCanvasX(x), H - pad.bottom + 14);
+    }
+    ctx.textAlign = 'right';
+    for (let y = Math.ceil(yMin); y <= yMax; y++) {
+        if (y === 0) continue;
+        ctx.fillText(y, pad.left - 6, toCanvasY(y) + 4);
+    }
+
+    // Draw a function curve
+    function drawCurve(fn, color, width, dash) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.setLineDash(dash || []);
+        ctx.beginPath();
+        const steps = 400;
+        for (let i = 0; i <= steps; i++) {
+            const x = xMin + (xMax - xMin) * i / steps;
+            const y = fn(x);
+            const cx = toCanvasX(x), cy = toCanvasY(y);
+            if (i === 0) ctx.moveTo(cx, cy);
+            else ctx.lineTo(cx, cy);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    const act = ACT[selectedAct];
+
+    // Compare function (if active)
+    if (compareAct && compareAct !== selectedAct) {
+        const cmp = ACT[compareAct];
+        drawCurve(cmp.fn, cmp.color, 1.5, [6, 4]);
+        drawCurve(cmp.dfn, cmp.color, 1, [3, 3]);
+    }
+
+    // Primary function and derivative
+    drawCurve(act.fn, act.color, 3, []);
+    drawCurve(act.dfn, act.color, 2, [6, 3]);
+
+    // Legend
+    ctx.font = '11px "Inter"';
+    ctx.textAlign = 'left';
+    const legX = pad.left + 8, legY = pad.top + 14;
+    // Solid line = function
+    ctx.strokeStyle = act.color; ctx.lineWidth = 3; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(legX, legY); ctx.lineTo(legX + 24, legY); ctx.stroke();
+    ctx.fillStyle = var_text(); ctx.fillText(act.name + '(x)', legX + 30, legY + 4);
+    // Dashed line = derivative
+    ctx.strokeStyle = act.color; ctx.lineWidth = 2; ctx.setLineDash([6, 3]);
+    ctx.beginPath(); ctx.moveTo(legX, legY + 18); ctx.lineTo(legX + 24, legY + 18); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillText(act.name + "'(x) — derivative", legX + 30, legY + 22);
+
+    if (compareAct && compareAct !== selectedAct) {
+        const cmp = ACT[compareAct];
+        ctx.strokeStyle = cmp.color; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
+        ctx.beginPath(); ctx.moveTo(legX, legY + 36); ctx.lineTo(legX + 24, legY + 36); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = var_text(); ctx.fillText(cmp.name + ' (compare)', legX + 30, legY + 40);
+    }
+
+    // Probe line
+    if (probeX !== null) {
+        const px = toCanvasX(probeX);
+        const fy = act.fn(probeX);
+        const dy = act.dfn(probeX);
+
+        // Vertical probe line
+        ctx.strokeStyle = 'rgba(44, 40, 37, 0.25)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.moveTo(px, pad.top); ctx.lineTo(px, H - pad.bottom); ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Dot on function
+        ctx.fillStyle = act.color;
+        ctx.beginPath(); ctx.arc(px, toCanvasY(fy), 5, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+
+        // Dot on derivative
+        ctx.fillStyle = act.color;
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath(); ctx.arc(px, toCanvasY(dy), 4, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Tangent line segment
+        const tangentLen = 1.2;
+        const tx1 = probeX - tangentLen, tx2 = probeX + tangentLen;
+        const ty1 = fy - dy * tangentLen, ty2 = fy + dy * tangentLen;
+        ctx.strokeStyle = 'rgba(192, 57, 43, 0.5)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(toCanvasX(tx1), toCanvasY(ty1));
+        ctx.lineTo(toCanvasX(tx2), toCanvasY(ty2));
+        ctx.stroke();
+
+        // Update readout
+        document.getElementById('ro-x').textContent = probeX.toFixed(2);
+        document.getElementById('ro-fx').textContent = fy.toFixed(4);
+        document.getElementById('ro-dfx').textContent = dy.toFixed(4);
+
+        // Fate description
+        let fate;
+        if (dy === 0) fate = 'blocked (0)';
+        else if (dy < 0.01) fate = 'nearly dead';
+        else if (dy < 0.1) fate = 'severely attenuated';
+        else if (dy < 0.5) fate = 'attenuated';
+        else if (dy < 0.95) fate = 'partially passed';
+        else if (dy <= 1.05) fate = 'fully passed';
+        else fate = 'amplified (>1)';
+
+        const fateEl = document.getElementById('ro-fate');
+        fateEl.textContent = fate;
+        fateEl.style.color = dy < 0.1 ? 'var(--danger)' : dy < 0.5 ? 'var(--warning)' : 'var(--success)';
+    }
+
+    // Title
+    const titleEl = document.getElementById('fn-panel-title');
+    let title = act.name + ': function and derivative';
+    if (compareAct && compareAct !== selectedAct) title += ' vs. ' + ACT[compareAct].name;
+    titleEl.textContent = title;
+
+    document.getElementById('fn-panel-sub').textContent = act.desc;
+}
+
+function var_text() { return getComputedStyle(document.body).getPropertyValue('--text').trim() || '#2c2825'; }
+
+// ══════════════════════════════════════════════════
+// Drawing: Layer stacking
+// ══════════════════════════════════════════════════
+
+function drawStackPanel() {
+    const canvas = document.getElementById('stack-canvas');
+    const parent = canvas.parentElement;
+    canvas.width = Math.min(parent.clientWidth, 700);
+    const W = canvas.width, H = canvas.height;
+    const ctx = canvas.getContext('2d');
+
+    ctx.clearRect(0, 0, W, H);
+
+    const pad = { top: 15, bottom: 20, left: 50, right: 20 };
+    const plotW = W - pad.left - pad.right;
+    const plotH = H - pad.top - pad.bottom;
+
+    const xMin = -3, xMax = 3;
+
+    // Compute y range dynamically
+    const act = ACT[selectedAct];
+    let yMinAuto = -0.5, yMaxAuto = 1.5;
+
+    // Sample to find range
+    const steps = 300;
+    let yVals = [];
+    for (let i = 0; i <= steps; i++) {
+        const x = xMin + (xMax - xMin) * i / steps;
+        let v = x;
+        for (let l = 0; l < numLayers; l++) { v = act.fn(v); if (!isFinite(v)) break; }
+        if (isFinite(v)) yVals.push(v);
+    }
+    if (yVals.length > 0) {
+        const minV = Math.min(...yVals);
+        const maxV = Math.max(...yVals);
+        const margin = Math.max(0.2, (maxV - minV) * 0.15);
+        yMinAuto = Math.min(-0.2, minV - margin);
+        yMaxAuto = Math.max(0.5, maxV + margin);
+    }
+
+    const yMin = yMinAuto, yMax = yMaxAuto;
+
+    function toCanvasX(x) { return pad.left + (x - xMin) / (xMax - xMin) * plotW; }
+    function toCanvasY(y) { return pad.top + (1 - (y - yMin) / (yMax - yMin)) * plotH; }
+
+    // Grid
+    ctx.strokeStyle = '#eae6e0';
+    ctx.lineWidth = 1;
+    for (let x = Math.ceil(xMin); x <= xMax; x++) {
+        const cx = toCanvasX(x);
+        ctx.beginPath(); ctx.moveTo(cx, pad.top); ctx.lineTo(cx, H - pad.bottom); ctx.stroke();
+    }
+    const yStep = Math.max(0.5, Math.round((yMax - yMin) / 6 * 2) / 2);
+    for (let y = Math.ceil(yMin / yStep) * yStep; y <= yMax; y += yStep) {
+        const cy = toCanvasY(y);
+        if (cy < pad.top || cy > H - pad.bottom) continue;
+        ctx.beginPath(); ctx.moveTo(pad.left, cy); ctx.lineTo(W - pad.right, cy); ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = '#b0aaa2';
+    ctx.lineWidth = 1.5;
+    const zeroY = toCanvasY(0);
+    if (zeroY >= pad.top && zeroY <= H - pad.bottom) {
+        ctx.beginPath(); ctx.moveTo(pad.left, zeroY); ctx.lineTo(W - pad.right, zeroY); ctx.stroke();
+    }
+    const zeroX = toCanvasX(0);
+    ctx.beginPath(); ctx.moveTo(zeroX, pad.top); ctx.lineTo(zeroX, H - pad.bottom); ctx.stroke();
+
+    // Axis labels
+    ctx.fillStyle = '#9a948e';
+    ctx.font = '10px "JetBrains Mono"';
+    ctx.textAlign = 'center';
+    for (let x = Math.ceil(xMin); x <= xMax; x++) {
+        if (x === 0) continue;
+        ctx.fillText(x, toCanvasX(x), H - pad.bottom + 14);
+    }
+    ctx.textAlign = 'right';
+    for (let y = Math.ceil(yMin / yStep) * yStep; y <= yMax; y += yStep) {
+        const cy = toCanvasY(y);
+        if (cy < pad.top + 5 || cy > H - pad.bottom - 5) continue;
+        ctx.fillText(y % 1 === 0 ? y.toFixed(0) : y.toFixed(1), pad.left - 6, cy + 4);
+    }
+
+    // Identity line (y = x) for reference
+    ctx.strokeStyle = '#d8d4ce';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(toCanvasX(Math.max(xMin, yMin)), toCanvasY(Math.max(xMin, yMin)));
+    ctx.lineTo(toCanvasX(Math.min(xMax, yMax)), toCanvasY(Math.min(xMax, yMax)));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Draw intermediate layers with fading
+    const layersToShow = Math.min(numLayers, 20);
+    const showIntermediates = numLayers > 1 && numLayers <= 20;
+
+    if (showIntermediates) {
+        for (let targetLayer = 1; targetLayer < numLayers; targetLayer++) {
+            const alpha = 0.06 + 0.15 * (targetLayer / numLayers);
+            ctx.strokeStyle = act.color;
+            ctx.globalAlpha = alpha;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = 0; i <= steps; i++) {
+                const x = xMin + (xMax - xMin) * i / steps;
+                let v = x;
+                for (let l = 0; l < targetLayer; l++) { v = act.fn(v); if (!isFinite(v)) break; }
+                if (!isFinite(v)) continue;
+                const cx = toCanvasX(x), cy = toCanvasY(v);
+                if (cy < pad.top - 50 || cy > H - pad.bottom + 50) { ctx.moveTo(cx, cy); continue; }
+                if (i === 0) ctx.moveTo(cx, cy);
+                else ctx.lineTo(cx, cy);
+            }
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    // Compare (stacked)
+    if (compareAct && compareAct !== selectedAct) {
+        const cmp = ACT[compareAct];
+        ctx.strokeStyle = cmp.color;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+            const x = xMin + (xMax - xMin) * i / steps;
+            let v = x;
+            for (let l = 0; l < numLayers; l++) { v = cmp.fn(v); if (!isFinite(v)) break; }
+            if (!isFinite(v)) continue;
+            const cx = toCanvasX(x), cy = toCanvasY(v);
+            if (cy < pad.top - 50 || cy > H - pad.bottom + 50) { ctx.moveTo(cx, cy); continue; }
+            if (i === 0) ctx.moveTo(cx, cy);
+            else ctx.lineTo(cx, cy);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    // Final layer (primary)
+    ctx.strokeStyle = act.color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+        const x = xMin + (xMax - xMin) * i / steps;
+        let v = x;
+        for (let l = 0; l < numLayers; l++) { v = act.fn(v); if (!isFinite(v)) break; }
+        if (!isFinite(v)) continue;
+        const cx = toCanvasX(x), cy = toCanvasY(v);
+        if (cy < pad.top - 50 || cy > H - pad.bottom + 50) { ctx.moveTo(cx, cy); continue; }
+        if (i === 0) ctx.moveTo(cx, cy);
+        else ctx.lineTo(cx, cy);
+    }
+    ctx.stroke();
+
+    // Legend
+    ctx.font = '11px "Inter"';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = var_text();
+    const legX = pad.left + 8, legY = pad.top + 14;
+    ctx.strokeStyle = act.color; ctx.lineWidth = 3; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(legX, legY); ctx.lineTo(legX + 24, legY); ctx.stroke();
+    ctx.fillText(act.name + ' x' + numLayers, legX + 30, legY + 4);
+
+    if (showIntermediates) {
+        ctx.strokeStyle = act.color; ctx.lineWidth = 1; ctx.globalAlpha = 0.3;
+        ctx.beginPath(); ctx.moveTo(legX, legY + 18); ctx.lineTo(legX + 24, legY + 18); ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.fillText('intermediate layers', legX + 30, legY + 22);
+    }
+
+    ctx.strokeStyle = '#d8d4ce'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(legX, legY + (showIntermediates ? 36 : 18)); ctx.lineTo(legX + 24, legY + (showIntermediates ? 36 : 18)); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillText('y = x (identity)', legX + 30, legY + (showIntermediates ? 40 : 22));
+
+    // Info text
+    const infoEl = document.getElementById('stack-info');
+    if (numLayers === 1) {
+        infoEl.textContent = '1 layer — input passes through activation once.';
+    } else {
+        // Compute output range
+        let outMin = act.fn(xMin), outMax = act.fn(xMax);
+        let v = xMin;
+        for (let l = 0; l < numLayers; l++) v = act.fn(v);
+        outMin = v;
+        v = xMax;
+        for (let l = 0; l < numLayers; l++) v = act.fn(v);
+        outMax = v;
+
+        const range = Math.abs(outMax - outMin);
+        let comment = '';
+        if (range < 0.01) comment = ' — output is nearly constant (all information destroyed)';
+        else if (range < 0.1) comment = ' — severe compression (most variation lost)';
+        else if (range < 0.5) comment = ' — moderate compression';
+        else comment = ' — signal preserved';
+
+        infoEl.textContent = `${numLayers} layers — output range [${outMin.toFixed(3)}, ${outMax.toFixed(3)}]${comment}`;
+    }
+
+    // Update hint
+    const hintEl = document.getElementById('stack-hint');
+    if (numLayers >= 10) {
+        if (selectedAct === 'sigmoid') {
+            hintEl.textContent = 'Sigmoid after ' + numLayers + ' layers: everything converges to the fixed point ~0.5. The entire input range is crushed into a tiny band — no information survives. This is the forward-pass side of the vanishing gradient problem.';
+        } else if (selectedAct === 'tanh') {
+            hintEl.textContent = 'Tanh after ' + numLayers + ' layers: outputs collapse toward 0 (the fixed point). Slightly better than sigmoid since it is zero-centered, but still crushes the signal.';
+        } else if (selectedAct === 'relu') {
+            hintEl.textContent = 'ReLU is idempotent: applying it once is the same as applying it 100 times. max(0, max(0, x)) = max(0, x). The signal is preserved perfectly — but negative inputs are permanently killed.';
+        } else if (selectedAct === 'gelu' || selectedAct === 'silu') {
+            hintEl.textContent = 'GELU/SiLU are NOT idempotent — repeated application gradually compresses the output. But much less aggressively than sigmoid/tanh due to the near-identity behavior for large positive inputs.';
+        } else {
+            hintEl.textContent = 'Watch how repeated application affects the output range. Compare saturating (sigmoid, tanh) vs. non-saturating (ReLU) activations.';
+        }
+    } else {
+        hintEl.textContent = 'Set layers > 1 to see what happens when a signal passes through repeated activations. Sigmoid crushes everything; ReLU preserves or kills.';
+    }
+}
+
+// ══════════════════════════════════════════════════
+// Mouse tracking on function canvas
+// ══════════════════════════════════════════════════
+
+const fnCanvas = document.getElementById('fn-canvas');
+
+fnCanvas.addEventListener('mousemove', (e) => {
+    const rect = fnCanvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const pad = { left: 50, right: 20 };
+    const plotW = fnCanvas.width - pad.left - pad.right;
+    const xMin = -4, xMax = 4;
+    probeX = xMin + (cx - pad.left) / plotW * (xMax - xMin);
+    probeX = Math.max(xMin, Math.min(xMax, probeX));
+    drawFnPanel();
+});
+
+fnCanvas.addEventListener('mouseleave', () => {
+    probeX = null;
+    document.getElementById('ro-x').textContent = '—';
+    document.getElementById('ro-fx').textContent = '—';
+    document.getElementById('ro-dfx').textContent = '—';
+    document.getElementById('ro-fate').textContent = '—';
+    document.getElementById('ro-fate').style.color = '';
+    drawFnPanel();
+});
+
+// ══════════════════════════════════════════════════
+// Controls
+// ══════════════════════════════════════════════════
+
+document.getElementById('num-layers').addEventListener('input', (e) => {
+    numLayers = parseInt(e.target.value);
+    document.getElementById('num-layers-val').textContent = numLayers;
+    document.getElementById('stack-panel-sub').textContent = numLayers + (numLayers === 1 ? ' layer' : ' layers') + ', input [-3, 3]';
+    drawStackPanel();
+});
+
+document.getElementById('leaky-alpha').addEventListener('input', (e) => {
+    leakyAlpha = parseFloat(e.target.value);
+    document.getElementById('leaky-alpha-val').textContent = leakyAlpha.toFixed(3);
+    // Update leaky relu functions
+    ACT.leaky_relu.fn = x => x >= 0 ? x : leakyAlpha * x;
+    ACT.leaky_relu.dfn = x => x >= 0 ? 1 : leakyAlpha;
+    if (selectedAct === 'leaky_relu' || compareAct === 'leaky_relu') redraw();
+});
+
+// ══════════════════════════════════════════════════
+// Redraw all
+// ══════════════════════════════════════════════════
+
+function redraw() {
+    drawFnPanel();
+    drawStackPanel();
+}
+
+// ══════════════════════════════════════════════════
+// Init
+// ══════════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderMathInElement(document.body, {
+        delimiters: [{left: '$', right: '$', display: false}],
+        throwOnError: false
+    });
+    buildButtons();
+    redraw();
+    window.addEventListener('resize', redraw);
+});
+</script>
+
+</body>
+</html>

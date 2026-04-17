@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cross-Entropy & Softmax — Worked Math Example</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    --bg: #fafaf8; --surface: #ffffff; --surface-alt: #f5f3ef;
+    --border: #e2ddd5; --text: #2c2825; --text-secondary: #6b6560; --text-tertiary: #9a948e;
+    --accent: #3d6b9e; --accent-light: #e8f0f8;
+    --success: #27864a; --success-light: #e8f5ec;
+    --danger: #c0392b; --danger-light: #fdeaea;
+    --warning: #b87a1a; --warning-light: #fef6e8;
+    --purple: #7b5ea7; --purple-light: #f0ebf5;
+    --teal: #1a7a7a;
+    --cat: #2196F3; --dog: #E91E63; --fish: #4CAF50;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text);
+    line-height: 1.7; max-width: 900px; margin: 0 auto; padding: 2rem 2rem 6rem;
+}
+
+h1 { font-family: 'Source Serif 4', serif; font-size: 2rem; margin-bottom: 0.5rem; }
+h2 { font-family: 'Source Serif 4', serif; font-size: 1.5rem; margin-top: 3rem; margin-bottom: 1rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+h3 { font-family: 'Source Serif 4', serif; font-size: 1.15rem; margin-top: 1.75rem; margin-bottom: 0.6rem; }
+p { margin-bottom: 1rem; }
+.subtitle { color: var(--text-secondary); font-size: 1.05rem; margin-bottom: 2rem; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.9em; background: var(--surface-alt); padding: 0.1em 0.35em; border-radius: 3px; }
+
+.hint { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 0.75rem 1rem; margin: 1.25rem 0; font-size: 0.9rem; color: var(--text-secondary); }
+.hint::before { content: "What to notice: "; font-weight: 600; color: var(--accent); }
+
+.key-answer { background: var(--success-light); border-left: 3px solid var(--success); padding: 0.75rem 1rem; margin: 1.25rem 0; font-size: 0.9rem; }
+.key-answer::before { content: "Key insight: "; font-weight: 600; color: var(--success); }
+
+.warning-box { background: var(--warning-light); border-left: 3px solid var(--warning); padding: 0.75rem 1rem; margin: 1.25rem 0; font-size: 0.9rem; }
+
+/* Step-through */
+.step-container { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 1.5rem 0; }
+.step-controls { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: var(--surface-alt); border-bottom: 1px solid var(--border); }
+.step-controls button { font-family: 'Inter', sans-serif; font-size: 0.85rem; padding: 0.35rem 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); cursor: pointer; }
+.step-controls button:hover { background: var(--accent-light); }
+.step-controls button:disabled { opacity: 0.4; cursor: default; }
+.step-controls button:disabled:hover { background: var(--surface); }
+.step-controls .step-label { margin-left: auto; font-size: 0.85rem; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; }
+.step-body { padding: 1.5rem; min-height: 160px; }
+.step-body .math-line { margin: 0.6rem 0; padding: 0.4rem 0; }
+.step-body .explanation { color: var(--text-secondary); font-size: 0.9rem; margin: 0.5rem 0; padding-left: 1rem; border-left: 2px solid var(--border); }
+.computed { font-family: 'JetBrains Mono', monospace; background: var(--accent-light); padding: 0.15em 0.4em; border-radius: 3px; font-weight: 500; }
+.computed-grad { font-family: 'JetBrains Mono', monospace; background: var(--purple-light); padding: 0.15em 0.4em; border-radius: 3px; font-weight: 500; }
+.computed-update { font-family: 'JetBrains Mono', monospace; background: var(--success-light); padding: 0.15em 0.4em; border-radius: 3px; font-weight: 500; }
+
+.compare-table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+.compare-table th, .compare-table td { padding: 0.5rem 0.75rem; border: 1px solid var(--border); text-align: center; }
+.compare-table th { background: var(--surface-alt); font-weight: 600; }
+
+.toc { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem 1.5rem; margin: 1.5rem 0; }
+.toc-title { font-family: 'Source Serif 4', serif; font-weight: 600; margin-bottom: 0.75rem; }
+.toc ol { padding-left: 1.5rem; }
+.toc li { margin: 0.3rem 0; }
+.toc a { color: var(--accent); text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<h1>Cross-Entropy & Softmax Math</h1>
+<p class="subtitle">From raw logits to loss value to gradient — every number computed by hand.</p>
+
+<p>The <a href="index.html">cross-entropy explorer</a> lets you drag sliders and watch values respond. This page shows <strong>exactly how those values are computed</strong>, step by step, with real arithmetic. It follows the same format as the <a href="../backpropagation/index.html">backpropagation math walkthrough</a>.</p>
+
+<div class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+        <li><a href="#part1">Softmax: logits to probabilities</a></li>
+        <li><a href="#part2">Cross-entropy: probability to loss</a></li>
+        <li><a href="#part3">The gradient: loss to update direction</a></li>
+        <li><a href="#part4">Applying the update</a></li>
+        <li><a href="#part5">Autoregressive cross-entropy — loss for sequences</a></li>
+        <li><a href="#part6">Contrastive loss — learning to match pairs</a></li>
+    </ol>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="part1">1. Softmax: Logits to Probabilities</h2>
+
+<p>A 3-class classifier (Cat, Dog, Fish) outputs <strong>logits</strong> — raw, unbounded scores from the last linear layer. The true class is <strong style="color: var(--cat);">Cat</strong>.</p>
+
+<div style="text-align: center; margin: 1.5rem 0; padding: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
+    <strong>Logits:</strong> $z_{\text{cat}} = 2.0$, &nbsp; $z_{\text{dog}} = 1.0$, &nbsp; $z_{\text{fish}} = -1.0$<br>
+    <strong>True class:</strong> Cat &nbsp; → &nbsp; one-hot target $y = [1, 0, 0]$
+</div>
+
+<p>These logits can be any real numbers — positive, negative, or zero. They are <em>not</em> probabilities. <strong>Softmax</strong> converts them to a probability distribution: non-negative values that sum to 1.</p>
+
+<div class="step-container" id="softmax-stepper">
+    <div class="step-controls">
+        <button id="sm-prev" disabled>← Prev</button>
+        <button id="sm-next">Next →</button>
+        <button id="sm-reset" style="margin-left: 0.5rem;">Reset</button>
+        <span class="step-label" id="sm-step-label">Step 1 / 6</span>
+    </div>
+    <div class="step-body" id="sm-step-body"></div>
+</div>
+
+<div class="hint">Softmax amplifies differences. The logit gap between Cat (2.0) and Fish (-1.0) is only 3.0, but the probability ratio is 7.389 / 0.368 = 20:1. The exponential makes confident predictions <em>very</em> confident.</div>
+
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="part2">2. Cross-Entropy: Probability to Loss</h2>
+
+<p>Now that we have probabilities, we can compute the loss. Cross-entropy asks one simple question: <strong>what probability did the model assign to the correct answer?</strong></p>
+
+<div class="step-container" id="ce-stepper">
+    <div class="step-controls">
+        <button id="ce-prev" disabled>← Prev</button>
+        <button id="ce-next">Next →</button>
+        <button id="ce-reset" style="margin-left: 0.5rem;">Reset</button>
+        <span class="step-label" id="ce-step-label">Step 1 / 5</span>
+    </div>
+    <div class="step-body" id="ce-step-body"></div>
+</div>
+
+<div class="key-answer">The entire cross-entropy computation reduces to: take the predicted probability of the correct class, apply $-\log$. That's it. All the other predicted probabilities don't directly appear in the loss — they affect it only indirectly through the softmax normalization (they determine what probability is "left over" for the correct class).</div>
+
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="part3">3. The Gradient: Loss to Update Direction</h2>
+
+<p>To train the network, we need the gradient of the loss with respect to each logit: $\frac{\partial \mathcal{L}}{\partial z_c}$. This tells us which direction each logit should move to reduce the loss.</p>
+
+<div class="step-container" id="grad-stepper">
+    <div class="step-controls">
+        <button id="gr-prev" disabled>← Prev</button>
+        <button id="gr-next">Next →</button>
+        <button id="gr-reset" style="margin-left: 0.5rem;">Reset</button>
+        <span class="step-label" id="gr-step-label">Step 1 / 4</span>
+    </div>
+    <div class="step-body" id="gr-step-body"></div>
+</div>
+
+<div class="hint">The gradient for cross-entropy + softmax is $\hat{y}_c - y_c$ — the simplest possible form. This is not a coincidence: the combination of softmax and cross-entropy was designed so that the complicated exponentials in softmax and the logarithm in cross-entropy cancel during differentiation, leaving this clean result.</div>
+
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="part4">4. Applying the Update</h2>
+
+<p>The logit gradients flow backward through the network to update all parameters. But for illustration, let's see what happens if we directly update the logits themselves with learning rate $\eta = 0.5$:</p>
+
+<div class="step-container" id="update-stepper">
+    <div class="step-controls">
+        <button id="up-prev" disabled>← Prev</button>
+        <button id="up-next">Next →</button>
+        <button id="up-reset" style="margin-left: 0.5rem;">Reset</button>
+        <span class="step-label" id="up-step-label">Step 1 / 3</span>
+    </div>
+    <div class="step-body" id="up-step-body"></div>
+</div>
+
+<div class="warning-box">
+    <strong>In a real network</strong>, you don't update logits directly — they're computed from the layer below. The gradients propagate backward through all layers via <a href="../backpropagation/index.html">backpropagation</a>, updating the <em>weights</em> that produce these logits. But the direction of change is the same: the true class logit goes up, the wrong class logits go down. For a full forward-backward-update example through the network, see the <a href="../gradient-descent/sgd-math.html">SGD math walkthrough</a>.
+</div>
+
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="part5">5. Autoregressive Cross-Entropy — Loss for Sequences</h2>
+
+<p>Language models don't classify a single input — they predict the <strong>next token</strong> at every position in a sequence. The loss is the sum of per-position cross-entropies.</p>
+
+<div style="text-align: center; margin: 1.5rem 0; padding: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
+    <strong>Sequence:</strong> "The cat sat"<br>
+    <strong>Tokens:</strong> ["The", "cat", "sat"] &nbsp; (vocabulary of 5 words for this toy example)
+</div>
+
+<div class="step-container" id="ar-stepper">
+    <div class="step-controls">
+        <button id="ar-prev" disabled>← Prev</button>
+        <button id="ar-next">Next →</button>
+        <button id="ar-reset" style="margin-left: 0.5rem;">Reset</button>
+        <span class="step-label" id="ar-step-label">Step 1 / 5</span>
+    </div>
+    <div class="step-body" id="ar-step-body"></div>
+</div>
+
+<div class="key-answer">Autoregressive cross-entropy is just standard cross-entropy applied independently at each position, then summed. Each position is a separate classification problem: "given the tokens so far, which token comes next?" out of the entire vocabulary. A language model with a vocabulary of 50,000 tokens is doing 50,000-class classification at every position.</div>
+
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="part6">6. Contrastive Loss — Learning to Match Pairs</h2>
+
+<p>Contrastive loss (used in CLIP, SimCLR, etc.) doesn't classify into fixed categories. Instead, it learns which things <strong>go together</strong>. Given a batch of paired examples (e.g., images and their captions), the model should match each item to its correct partner.</p>
+
+<div style="text-align: center; margin: 1.5rem 0; padding: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
+    <strong>Batch of 3 image-text pairs:</strong><br>
+    Pair 1: [photo of cat] ↔ "a fluffy cat"<br>
+    Pair 2: [photo of dog] ↔ "a brown dog"<br>
+    Pair 3: [photo of fish] ↔ "a goldfish in a bowl"
+</div>
+
+<div class="step-container" id="cl-stepper">
+    <div class="step-controls">
+        <button id="cl-prev" disabled>← Prev</button>
+        <button id="cl-next">Next →</button>
+        <button id="cl-reset" style="margin-left: 0.5rem;">Reset</button>
+        <span class="step-label" id="cl-step-label">Step 1 / 5</span>
+    </div>
+    <div class="step-body" id="cl-step-body"></div>
+</div>
+
+<div class="hint">Contrastive loss reuses the same cross-entropy math — the similarity matrix rows and columns are treated as classification problems, with softmax converting similarities to "match probabilities." The difference is that the "classes" aren't fixed categories (cat/dog/fish) but the other items in the batch.</div>
+
+
+<script>
+// ══════════════════════════════════════════════════
+// Pre-computed values
+// ══════════════════════════════════════════════════
+
+const z = [2.0, 1.0, -1.0];
+const names = ['cat', 'dog', 'fish'];
+const Colors = ['var(--cat)', 'var(--dog)', 'var(--fish)'];
+const trueClass = 0;
+
+// Softmax
+const exps = z.map(v => Math.exp(v));      // [7.389, 2.718, 0.368]
+const expSum = exps.reduce((a, b) => a + b); // 10.475
+const probs = exps.map(e => e / expSum);     // [0.7054, 0.2595, 0.0351]
+
+// Numerically stable version
+const maxZ = Math.max(...z);                 // 2.0
+const zShifted = z.map(v => v - maxZ);       // [0, -1, -3]
+const expsStable = zShifted.map(v => Math.exp(v));
+const expSumStable = expsStable.reduce((a, b) => a + b);
+const probsStable = expsStable.map(e => e / expSumStable);
+
+// Cross-entropy
+const loss = -Math.log(probs[trueClass]);    // 0.3490
+
+// Gradients
+const grads = probs.map((p, i) => i === trueClass ? p - 1 : p);
+
+// Update
+const lr = 0.5;
+const zNew = z.map((v, i) => v - lr * grads[i]);
+const expsNew = zNew.map(v => Math.exp(v));
+const expSumNew = expsNew.reduce((a, b) => a + b);
+const probsNew = expsNew.map(e => e / expSumNew);
+const lossNew = -Math.log(probsNew[trueClass]);
+
+function f4(v) { return v.toFixed(4); }
+function f3(v) { return v.toFixed(3); }
+
+// ══════════════════════════════════════════════════
+// Softmax steps
+// ══════════════════════════════════════════════════
+
+const smSteps = [
+    {
+        html: `
+            <div class="math-line"><strong>Step 1: Exponentiate each logit</strong></div>
+            <div class="math-line">The exponential function $\\exp(z)$ maps any real number to a <em>positive</em> number:</div>
+            <div class="math-line">$\\exp(z_{\\text{cat}}) = \\exp(2.0) = $ <span class="computed">${f3(exps[0])}</span></div>
+            <div class="math-line">$\\exp(z_{\\text{dog}}) = \\exp(1.0) = $ <span class="computed">${f3(exps[1])}</span></div>
+            <div class="math-line">$\\exp(z_{\\text{fish}}) = \\exp(-1.0) = $ <span class="computed">${f3(exps[2])}</span></div>
+            <div class="explanation">All values are now positive, but they don't sum to 1 yet. Notice how the exponential amplifies the gap: logits [2.0, 1.0, -1.0] become [${f3(exps[0])}, ${f3(exps[1])}, ${f3(exps[2])}].</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>Step 2: Sum the exponentials</strong></div>
+            <div class="math-line">$\\sum_j \\exp(z_j) = ${f3(exps[0])} + ${f3(exps[1])} + ${f3(exps[2])} = $ <span class="computed">${f3(expSum)}</span></div>
+            <div class="explanation">This is the normalizing constant — we'll divide each exponential by this sum to get probabilities that add to 1.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>Step 3: Divide to get probabilities</strong></div>
+            <div class="math-line">$\\hat{y}_{\\text{cat}} = \\frac{\\exp(2.0)}{${f3(expSum)}} = \\frac{${f3(exps[0])}}{${f3(expSum)}} = $ <span class="computed">${f4(probs[0])}</span> <span style="color: var(--text-secondary);"> (${(probs[0]*100).toFixed(1)}%)</span></div>
+            <div class="math-line">$\\hat{y}_{\\text{dog}} = \\frac{\\exp(1.0)}{${f3(expSum)}} = \\frac{${f3(exps[1])}}{${f3(expSum)}} = $ <span class="computed">${f4(probs[1])}</span> <span style="color: var(--text-secondary);"> (${(probs[1]*100).toFixed(1)}%)</span></div>
+            <div class="math-line">$\\hat{y}_{\\text{fish}} = \\frac{\\exp(-1.0)}{${f3(expSum)}} = \\frac{${f3(exps[2])}}{${f3(expSum)}} = $ <span class="computed">${f4(probs[2])}</span> <span style="color: var(--text-secondary);"> (${(probs[2]*100).toFixed(1)}%)</span></div>
+            <div class="explanation">Check: ${f4(probs[0])} + ${f4(probs[1])} + ${f4(probs[2])} = ${f4(probs[0] + probs[1] + probs[2])} ✓ — the probabilities sum to 1. The model assigns 70.5% to Cat, 26.0% to Dog, and 3.5% to Fish.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>The numerical stability trick</strong></div>
+            <div class="explanation" style="border: none; padding: 0;">In practice, logits can be large (e.g., $z = 100$), and $\\exp(100) \\approx 2.7 \\times 10^{43}$ would overflow. The fix: subtract $\\max(z)$ from all logits before exponentiating.</div>
+            <div class="math-line" style="margin-top: 0.75rem;">$\\max(z) = ${f3(maxZ)}$, so subtract ${f3(maxZ)} from each logit:</div>
+            <div class="math-line">$z' = [2.0 - 2.0, \\; 1.0 - 2.0, \\; -1.0 - 2.0] = [${zShifted.map(v => f3(v)).join(', ')}]$</div>
+            <div class="math-line" style="margin-top: 0.5rem;">Now exponentiate:</div>
+            <div class="math-line">$\\exp([${zShifted.map(v => f3(v)).join(', ')}]) = [${expsStable.map(v => f3(v)).join(', ')}]$</div>
+            <div class="math-line">$\\text{sum} = ${f3(expSumStable)}$</div>
+            <div class="math-line">$\\text{probabilities} = [${probsStable.map(v => f4(v)).join(', ')}]$</div>
+            <div class="explanation">Identical result! This works because $\\frac{\\exp(z_c - m)}{\\sum \\exp(z_j - m)} = \\frac{\\exp(z_c) \\cdot \\exp(-m)}{\\sum \\exp(z_j) \\cdot \\exp(-m)} = \\frac{\\exp(z_c)}{\\sum \\exp(z_j)}$ — the $\\exp(-m)$ cancels. But now the largest exponent is $\\exp(0) = 1$, so nothing can overflow.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>What softmax does, visually</strong></div>
+            <table class="compare-table" style="margin: 0.75rem 0;">
+                <tr><th></th><th style="color: var(--cat);">Cat</th><th style="color: var(--dog);">Dog</th><th style="color: var(--fish);">Fish</th></tr>
+                <tr><td style="text-align:left">Logits (raw)</td><td>2.0</td><td>1.0</td><td>-1.0</td></tr>
+                <tr><td style="text-align:left">After $\\exp$</td><td>${f3(exps[0])}</td><td>${f3(exps[1])}</td><td>${f3(exps[2])}</td></tr>
+                <tr><td style="text-align:left"><strong>Probabilities</strong></td><td><strong>${(probs[0]*100).toFixed(1)}%</strong></td><td><strong>${(probs[1]*100).toFixed(1)}%</strong></td><td><strong>${(probs[2]*100).toFixed(1)}%</strong></td></tr>
+            </table>
+            <div class="explanation">The exponential is the key: it maps the additive gap between logits to a multiplicative ratio between probabilities. A logit difference of 1.0 (Cat vs. Dog) becomes a probability ratio of $e^1 \\approx 2.7$. A logit difference of 3.0 (Cat vs. Fish) becomes a ratio of $e^3 \\approx 20$.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>The complete softmax formula</strong></div>
+            <div style="text-align: center; margin: 1rem 0; padding: 0.75rem; background: var(--surface-alt); border-radius: 6px; font-size: 1.1rem;">
+                $\\hat{y}_c = \\frac{\\exp(z_c)}{\\sum_{j=1}^{C} \\exp(z_j)}$
+            </div>
+            <div class="math-line">Three things happening at once:</div>
+            <ol style="margin: 0.5rem 0 0.5rem 1.5rem; line-height: 2;">
+                <li><strong>$\\exp$</strong> — makes everything positive</li>
+                <li><strong>$\\sum$</strong> — computes the normalizing constant</li>
+                <li><strong>$\\div$</strong> — ensures probabilities sum to 1</li>
+            </ol>
+            <div class="explanation">That's all softmax does. It's not a neural network layer with learned parameters — it's a fixed mathematical function that converts any vector of real numbers into a valid probability distribution.</div>
+        `
+    }
+];
+
+// ══════════════════════════════════════════════════
+// Cross-entropy steps
+// ══════════════════════════════════════════════════
+
+const ceSteps = [
+    {
+        html: `
+            <div class="math-line"><strong>The full cross-entropy formula</strong></div>
+            <div class="math-line">$\\mathcal{L} = -\\sum_{c=1}^{C} y_c \\log \\hat{y}_c$</div>
+            <div class="math-line" style="margin-top: 0.75rem;">With our values:</div>
+            <div class="math-line">$\\mathcal{L} = -(\\underbrace{1}_{y_{\\text{cat}}} \\cdot \\log ${f4(probs[0])} + \\underbrace{0}_{y_{\\text{dog}}} \\cdot \\log ${f4(probs[1])} + \\underbrace{0}_{y_{\\text{fish}}} \\cdot \\log ${f4(probs[2])})$</div>
+            <div class="explanation">The one-hot vector $y = [1, 0, 0]$ zeros out everything except the true class. The zeros kill the Dog and Fish terms entirely.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>Simplification: only the true class matters</strong></div>
+            <div class="math-line">$\\mathcal{L} = -(1 \\cdot \\log ${f4(probs[0])} + 0 + 0) = -\\log ${f4(probs[0])}$</div>
+            <div class="math-line" style="margin-top: 0.75rem;">$= -\\log(${f4(probs[0])}) = -(${f4(Math.log(probs[0]))}) = $ <span class="computed">${f4(loss)}</span></div>
+            <div class="explanation">The entire loss is $-\\log(\\hat{y}_{\\text{cat}})$ — the negative log of the predicted probability of the correct class. The model assigned 70.5% to Cat, giving a loss of ${f4(loss)}.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>What does ${f4(loss)} mean?</strong></div>
+            <table class="compare-table" style="margin: 0.75rem 0;">
+                <tr><th>$\\hat{y}_k$</th><th>Loss $-\\log(\\hat{y}_k)$</th><th>Interpretation</th></tr>
+                <tr><td>0.99</td><td>0.0101</td><td style="color: var(--success);">Nearly perfect</td></tr>
+                <tr><td>0.90</td><td>0.1054</td><td style="color: var(--success);">Good</td></tr>
+                <tr style="font-weight: 600; background: var(--accent-light);"><td>${f4(probs[0])}</td><td>${f4(loss)}</td><td style="color: var(--warning);">Correct but not very confident ← we are here</td></tr>
+                <tr><td>0.50</td><td>0.6931</td><td style="color: var(--warning);">Coin flip</td></tr>
+                <tr><td>0.10</td><td>2.3026</td><td style="color: var(--danger);">Badly wrong</td></tr>
+                <tr><td>0.01</td><td>4.6052</td><td style="color: var(--danger);">Catastrophic</td></tr>
+            </table>
+            <div class="explanation">Our loss of ${f4(loss)} is moderate — the model got the right answer but isn't very confident about it (70.5% isn't that far from a random guess at 33%). The gradient will push it to be more confident.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>The shape of $-\\log(p)$</strong></div>
+            <div class="explanation" style="border: none; padding: 0;">Two critical properties:</div>
+            <div class="math-line">1. <strong>Going from 90% to 99%</strong> reduces loss by only $0.1054 - 0.0101 = 0.095$</div>
+            <div class="math-line">2. <strong>Going from 10% to 1%</strong> increases loss by $4.605 - 2.303 = 2.302$</div>
+            <div class="explanation" style="margin-top: 0.75rem;">The penalty for being wrong is <em>vastly</em> larger than the reward for being more right. This asymmetry is why cross-entropy is effective: it creates a powerful gradient signal to correct mistakes, but barely nudges already-correct predictions. The model spends its capacity on fixing errors, not perfecting already-good predictions.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>Connection to information theory</strong></div>
+            <div class="explanation" style="border: none; padding: 0;">$-\\log(p)$ is the <strong>information content</strong> (in nats) of an event with probability $p$. A likely event ($p \\approx 1$) carries little information — it's not surprising. A rare event ($p \\approx 0$) carries enormous information — it's very surprising.</div>
+            <div class="math-line" style="margin-top: 0.75rem;">Cross-entropy loss = the "surprise" the model experiences when it sees the correct answer. A loss of ${f4(loss)} nats means the model is moderately surprised that the answer was Cat — because it only assigned 70.5% probability.</div>
+            <div class="explanation" style="margin-top: 0.5rem;">Minimizing cross-entropy = making the model less surprised by the training data = making its predicted distribution match the true distribution as closely as possible.</div>
+        `
+    }
+];
+
+// ══════════════════════════════════════════════════
+// Gradient steps
+// ══════════════════════════════════════════════════
+
+const gradSteps = [
+    {
+        html: `
+            <div class="math-line"><strong>The gradient formula</strong></div>
+            <div class="math-line">For cross-entropy loss with softmax, the gradient of the loss with respect to logit $z_c$ has a remarkably simple form:</div>
+            <div style="text-align: center; margin: 1rem 0; padding: 0.75rem; background: var(--surface-alt); border-radius: 6px; font-size: 1.1rem;">
+                $\\frac{\\partial \\mathcal{L}}{\\partial z_c} = \\hat{y}_c - y_c$
+            </div>
+            <div class="explanation">Predicted probability minus true label. That's it. The exponentials from softmax and the logarithm from cross-entropy cancel each other during differentiation, leaving this clean result.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>Computing each gradient</strong></div>
+            <div class="math-line">$\\frac{\\partial \\mathcal{L}}{\\partial z_{\\text{cat}}} = \\hat{y}_{\\text{cat}} - y_{\\text{cat}} = ${f4(probs[0])} - 1 = $ <span class="computed-grad">${f4(grads[0])}</span></div>
+            <div class="math-line">$\\frac{\\partial \\mathcal{L}}{\\partial z_{\\text{dog}}} = \\hat{y}_{\\text{dog}} - y_{\\text{dog}} = ${f4(probs[1])} - 0 = $ <span class="computed-grad">${f4(grads[1])}</span></div>
+            <div class="math-line">$\\frac{\\partial \\mathcal{L}}{\\partial z_{\\text{fish}}} = \\hat{y}_{\\text{fish}} - y_{\\text{fish}} = ${f4(probs[2])} - 0 = $ <span class="computed-grad">${f4(grads[2])}</span></div>
+            <div class="explanation">The true class (Cat) gets a <strong>negative</strong> gradient — push its logit <em>up</em>. The wrong classes get <strong>positive</strong> gradients — push their logits <em>down</em>. The magnitudes tell you how hard to push: Dog (26.0% probability) gets pushed down more than Fish (3.5%), because the model is wasting more probability on Dog.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>Check: gradients sum to zero</strong></div>
+            <div class="math-line">$${f4(grads[0])} + ${f4(grads[1])} + ${f4(grads[2])} = ${f4(grads[0] + grads[1] + grads[2])}$</div>
+            <div class="explanation">The gradients always sum to zero — probability is a zero-sum game. Any probability added to the correct class must come from somewhere (the wrong classes). This constraint is enforced automatically by the softmax structure.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>What the gradients mean for training</strong></div>
+            <table class="compare-table" style="margin: 0.75rem 0;">
+                <tr><th>Class</th><th>$\\hat{y}_c$</th><th>$y_c$</th><th>Gradient $\\hat{y}_c - y_c$</th><th>Action</th></tr>
+                <tr><td style="color: var(--cat); font-weight:600;">Cat (true)</td><td>${f4(probs[0])}</td><td>1</td><td style="color: var(--success);">${f4(grads[0])}</td><td>Push logit UP</td></tr>
+                <tr><td style="color: var(--dog); font-weight:600;">Dog</td><td>${f4(probs[1])}</td><td>0</td><td style="color: var(--danger);">+${f4(grads[1])}</td><td>Push logit DOWN</td></tr>
+                <tr><td style="color: var(--fish); font-weight:600;">Fish</td><td>${f4(probs[2])}</td><td>0</td><td style="color: var(--danger);">+${f4(grads[2])}</td><td>Push logit DOWN</td></tr>
+            </table>
+            <div class="explanation">These gradients flow backward through the network via backpropagation, adjusting all the weights that contributed to these logit values. The gradient $\\hat{y}_c - y_c$ is the starting point — the error signal that begins the backward pass.</div>
+        `
+    }
+];
+
+// ══════════════════════════════════════════════════
+// Update steps
+// ══════════════════════════════════════════════════
+
+const updateSteps = [
+    {
+        html: `
+            <div class="math-line"><strong>Update logits:</strong> $z_c \\leftarrow z_c - \\eta \\cdot \\frac{\\partial \\mathcal{L}}{\\partial z_c}$ &nbsp; with $\\eta = ${lr}$</div>
+            <table class="compare-table" style="margin: 0.75rem 0;">
+                <tr><th>Class</th><th>Old logit</th><th>$-\\eta \\cdot \\text{grad}$</th><th>New logit</th></tr>
+                <tr><td style="color: var(--cat); font-weight:600;">Cat</td><td>${f3(z[0])}</td><td>${f4(-lr * grads[0])}</td><td><span class="computed-update">${f4(zNew[0])}</span></td></tr>
+                <tr><td style="color: var(--dog); font-weight:600;">Dog</td><td>${f3(z[1])}</td><td>${f4(-lr * grads[1])}</td><td><span class="computed-update">${f4(zNew[1])}</span></td></tr>
+                <tr><td style="color: var(--fish); font-weight:600;">Fish</td><td>${f3(z[2])}</td><td>${f4(-lr * grads[2])}</td><td><span class="computed-update">${f4(zNew[2])}</span></td></tr>
+            </table>
+            <div class="explanation">Cat's logit went up (+${f4(-lr * grads[0])}), Dog's went down (${f4(-lr * grads[1])}), Fish's went down slightly (${f4(-lr * grads[2])}). The gap between Cat and Dog has widened.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>Recompute softmax with updated logits:</strong></div>
+            <table class="compare-table" style="margin: 0.75rem 0;">
+                <tr><th>Class</th><th>Old probability</th><th>New probability</th><th>Change</th></tr>
+                <tr><td style="color: var(--cat); font-weight:600;">Cat</td><td>${(probs[0]*100).toFixed(1)}%</td><td>${(probsNew[0]*100).toFixed(1)}%</td><td style="color: var(--success);">+${((probsNew[0] - probs[0])*100).toFixed(1)}%</td></tr>
+                <tr><td style="color: var(--dog); font-weight:600;">Dog</td><td>${(probs[1]*100).toFixed(1)}%</td><td>${(probsNew[1]*100).toFixed(1)}%</td><td style="color: var(--danger);">${((probsNew[1] - probs[1])*100).toFixed(1)}%</td></tr>
+                <tr><td style="color: var(--fish); font-weight:600;">Fish</td><td>${(probs[2]*100).toFixed(1)}%</td><td>${(probsNew[2]*100).toFixed(1)}%</td><td style="color: var(--danger);">${((probsNew[2] - probs[2])*100).toFixed(1)}%</td></tr>
+            </table>
+            <div class="explanation">Cat's probability rose from ${(probs[0]*100).toFixed(1)}% to ${(probsNew[0]*100).toFixed(1)}%. The probability was redistributed from Dog and Fish to Cat — exactly what the gradients asked for.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>New loss:</strong></div>
+            <div class="math-line">$\\mathcal{L}_{\\text{new}} = -\\log(${f4(probsNew[0])}) = $ <span class="computed-update">${f4(lossNew)}</span></div>
+            <div class="math-line" style="margin-top: 0.75rem;">
+                <strong>Before:</strong> loss = ${f4(loss)}, &nbsp; $\\hat{y}_{\\text{cat}}$ = ${(probs[0]*100).toFixed(1)}%<br>
+                <strong>After:</strong> &nbsp;loss = ${f4(lossNew)}, &nbsp; $\\hat{y}_{\\text{cat}}$ = ${(probsNew[0]*100).toFixed(1)}%
+            </div>
+            <div class="explanation" style="margin-top: 0.75rem;">Loss dropped from ${f4(loss)} to ${f4(lossNew)} — a ${((1 - lossNew/loss)*100).toFixed(0)}% reduction in one step. Repeat this across thousands of training examples and the model learns to classify correctly. Explore more in the <a href="index.html">cross-entropy interactive explorer</a>.</div>
+        `
+    }
+];
+
+// ══════════════════════════════════════════════════
+// Stepper
+// ══════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════
+// Autoregressive cross-entropy steps
+// ══════════════════════════════════════════════════
+
+// Toy vocabulary: ["The", "cat", "sat", "dog", "on"] (indices 0-4)
+// Sequence: "The cat sat" → predict "cat" from "The", predict "sat" from "The cat"
+const arProbs1 = [0.05, 0.60, 0.10, 0.15, 0.10]; // P(token | "The") — model predicts "cat" with 60%
+const arProbs2 = [0.02, 0.08, 0.70, 0.05, 0.15]; // P(token | "The cat") — model predicts "sat" with 70%
+const arLoss1 = -Math.log(arProbs1[1]); // true token is "cat" (index 1)
+const arLoss2 = -Math.log(arProbs2[2]); // true token is "sat" (index 2)
+const arTotal = arLoss1 + arLoss2;
+
+const arSteps = [
+    {
+        html: `
+            <div class="math-line"><strong>The setup: predict each next token</strong></div>
+            <div class="explanation" style="border: none; padding: 0;">The model sees tokens left-to-right. At each position, it outputs a probability distribution over the entire vocabulary for the next token:</div>
+            <div class="math-line" style="margin-top: 0.5rem;">Position 1: given "<strong>The</strong>" → predict next token (true answer: "<strong>cat</strong>")</div>
+            <div class="math-line">Position 2: given "<strong>The cat</strong>" → predict next token (true answer: "<strong>sat</strong>")</div>
+            <div class="explanation">Each position is a separate classification problem over the vocabulary [The, cat, sat, dog, on]. In real language models, the vocabulary is ~50,000–200,000 tokens.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>Position 1: predict "cat" given "The"</strong></div>
+            <div class="math-line">Model outputs probabilities (after softmax):</div>
+            <table class="compare-table" style="margin: 0.75rem 0;">
+                <tr><th>Token</th><th>The</th><th style="background: var(--accent-light);">cat</th><th>sat</th><th>dog</th><th>on</th></tr>
+                <tr><td style="text-align:left">$P(\\text{token} \\mid \\text{"The"})$</td><td>0.05</td><td style="background: var(--accent-light);"><strong>0.60</strong></td><td>0.10</td><td>0.15</td><td>0.10</td></tr>
+            </table>
+            <div class="math-line">Loss at position 1: $-\\log(P(\\text{"cat"} \\mid \\text{"The"})) = -\\log(0.60) = $ <span class="computed">${f4(arLoss1)}</span></div>
+            <div class="explanation">The model assigned 60% to "cat" — not bad, but not certain. The 15% on "dog" is wasted probability (the model thinks "The dog" is also plausible).</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>Position 2: predict "sat" given "The cat"</strong></div>
+            <div class="math-line">Model outputs probabilities:</div>
+            <table class="compare-table" style="margin: 0.75rem 0;">
+                <tr><th>Token</th><th>The</th><th>cat</th><th style="background: var(--accent-light);">sat</th><th>dog</th><th>on</th></tr>
+                <tr><td style="text-align:left">$P(\\text{token} \\mid \\text{"The cat"})$</td><td>0.02</td><td>0.08</td><td style="background: var(--accent-light);"><strong>0.70</strong></td><td>0.05</td><td>0.15</td></tr>
+            </table>
+            <div class="math-line">Loss at position 2: $-\\log(P(\\text{"sat"} \\mid \\text{"The cat"})) = -\\log(0.70) = $ <span class="computed">${f4(arLoss2)}</span></div>
+            <div class="explanation">With more context ("The cat"), the model is more confident about "sat" (70%) and wastes less on wrong tokens. More context → better predictions → lower loss.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>Total sequence loss: sum over positions</strong></div>
+            <div style="text-align: center; margin: 1rem 0; padding: 0.75rem; background: var(--surface-alt); border-radius: 6px; font-size: 1.05rem;">
+                $\\mathcal{L} = -\\sum_{t=1}^{T} \\log P(x_t \\mid x_1, \\ldots, x_{t-1})$
+            </div>
+            <div class="math-line">$\\mathcal{L} = \\underbrace{${f4(arLoss1)}}_{\\text{position 1}} + \\underbrace{${f4(arLoss2)}}_{\\text{position 2}} = $ <span class="computed">${f4(arTotal)}</span></div>
+            <div class="explanation">The total loss is simply the sum of per-position losses. Each position contributes independently — the loss at position 2 doesn't depend on whether position 1 was correct. This is why all positions can be computed in parallel during training (using causal masking to prevent peeking at future tokens).</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>Perplexity: a more intuitive metric</strong></div>
+            <div class="math-line">Average loss per token: $\\frac{${f4(arTotal)}}{2} = ${f4(arTotal / 2)}$</div>
+            <div class="math-line">Perplexity: $\\exp(\\text{avg loss}) = \\exp(${f4(arTotal / 2)}) = $ <span class="computed">${(Math.exp(arTotal / 2)).toFixed(2)}</span></div>
+            <div class="explanation">Perplexity is the exponential of the average per-token loss. It can be interpreted as: "on average, the model is as uncertain as if it were choosing uniformly among ${(Math.exp(arTotal / 2)).toFixed(1)} equally likely tokens." Lower perplexity = better predictions. A perfect model on this example would have perplexity 1.0 (zero loss). State-of-the-art language models achieve perplexities around 5–15 on English text.</div>
+        `
+    }
+];
+
+// ══════════════════════════════════════════════════
+// Contrastive loss steps
+// ══════════════════════════════════════════════════
+
+// Similarity matrix for 3 pairs (dot products of normalized embeddings)
+// Rows = images, columns = texts
+const sim = [
+    [0.9, 0.2, 0.1],  // image 1 (cat) similarities to [text 1, text 2, text 3]
+    [0.3, 0.8, 0.15],  // image 2 (dog)
+    [0.05, 0.1, 0.85]  // image 3 (fish)
+];
+const tau = 0.07; // temperature
+
+// Scaled similarities
+const simScaled = sim.map(row => row.map(v => v / tau));
+
+// Softmax each row (image→text matching)
+function rowSoftmax(row) {
+    const mx = Math.max(...row);
+    const ex = row.map(v => Math.exp(v - mx));
+    const s = ex.reduce((a, b) => a + b);
+    return ex.map(e => e / s);
+}
+
+const rowProbs = simScaled.map(row => rowSoftmax(row));
+const rowLosses = rowProbs.map((p, i) => -Math.log(p[i])); // diagonal is correct
+const contrastiveLossRows = rowLosses.reduce((a, b) => a + b) / 3;
+
+// Softmax each column (text→image matching)
+const colProbs = [0, 1, 2].map(j => {
+    const col = simScaled.map(row => row[j]);
+    return rowSoftmax(col);
+});
+const colLosses = colProbs.map((p, j) => -Math.log(p[j]));
+const contrastiveLossCols = colLosses.reduce((a, b) => a + b) / 3;
+const contrastiveLossTotal = (contrastiveLossRows + contrastiveLossCols) / 2;
+
+const clSteps = [
+    {
+        html: `
+            <div class="math-line"><strong>Step 1: Compute the similarity matrix</strong></div>
+            <div class="explanation" style="border: none; padding: 0;">Each image and text is encoded into an embedding vector. The similarity between image $i$ and text $j$ is their dot product (after normalization).</div>
+            <table class="compare-table" style="margin: 0.75rem 0;">
+                <tr><th></th><th>"a fluffy cat"</th><th>"a brown dog"</th><th>"a goldfish..."</th></tr>
+                <tr><td style="text-align:left">[cat photo]</td><td style="background: var(--success-light);"><strong>0.90</strong></td><td>0.20</td><td>0.10</td></tr>
+                <tr><td style="text-align:left">[dog photo]</td><td>0.30</td><td style="background: var(--success-light);"><strong>0.80</strong></td><td>0.15</td></tr>
+                <tr><td style="text-align:left">[fish photo]</td><td>0.05</td><td>0.10</td><td style="background: var(--success-light);"><strong>0.85</strong></td></tr>
+            </table>
+            <div class="explanation">The diagonal (highlighted) shows correct pairs — they should have high similarity. Off-diagonal entries are non-matching pairs — they should be low. The model is doing pretty well here, but not perfectly.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>Step 2: Scale by temperature and apply softmax</strong></div>
+            <div class="explanation" style="border: none; padding: 0;">Divide all similarities by a temperature $\\tau = 0.07$ (a small value that makes the distribution sharper), then softmax each <strong>row</strong> — turning each row into a probability distribution over texts:</div>
+            <div class="math-line">Row 1 (cat image): similarities $/\\tau$ = [${simScaled[0].map(v => v.toFixed(1)).join(', ')}]</div>
+            <div class="math-line">After softmax: [${rowProbs[0].map(v => v.toFixed(4)).join(', ')}]</div>
+            <div class="explanation">The temperature is very small, so the differences are amplified enormously. The cat image now has a ${(rowProbs[0][0] * 100).toFixed(1)}% probability of matching the cat text — the softmax has made it almost certain.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>Step 3: Cross-entropy on each row</strong></div>
+            <div class="explanation" style="border: none; padding: 0;">Each row is now a classification problem: "which text does this image match?" The correct answer is the diagonal entry.</div>
+            <div class="math-line">Row 1 (cat): $-\\log(${rowProbs[0][0].toFixed(4)}) = $ <span class="computed">${f4(rowLosses[0])}</span></div>
+            <div class="math-line">Row 2 (dog): $-\\log(${rowProbs[1][1].toFixed(4)}) = $ <span class="computed">${f4(rowLosses[1])}</span></div>
+            <div class="math-line">Row 3 (fish): $-\\log(${rowProbs[2][2].toFixed(4)}) = $ <span class="computed">${f4(rowLosses[2])}</span></div>
+            <div class="math-line" style="margin-top: 0.5rem;">Average row loss: $\\frac{1}{3}(${rowLosses.map(v => f4(v)).join(' + ')}) = $ <span class="computed">${f4(contrastiveLossRows)}</span></div>
+            <div class="explanation">This is the "image → text" direction. The same calculation is done for columns (text → image matching), giving the "text → image" direction.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>Step 4: Same thing for columns (text → image)</strong></div>
+            <div class="explanation" style="border: none; padding: 0;">Softmax each <strong>column</strong> — "which image does this text match?"</div>
+            <div class="math-line">Column 1 ("fluffy cat"): $-\\log(${colProbs[0][0].toFixed(4)}) = $ <span class="computed">${f4(colLosses[0])}</span></div>
+            <div class="math-line">Column 2 ("brown dog"): $-\\log(${colProbs[1][1].toFixed(4)}) = $ <span class="computed">${f4(colLosses[1])}</span></div>
+            <div class="math-line">Column 3 ("goldfish"): $-\\log(${colProbs[2][2].toFixed(4)}) = $ <span class="computed">${f4(colLosses[2])}</span></div>
+            <div class="math-line" style="margin-top: 0.5rem;">Average column loss: <span class="computed">${f4(contrastiveLossCols)}</span></div>
+            <div class="explanation">The column losses are slightly different from row losses because the normalization is different — softmax over a column normalizes against different competitors than softmax over a row.</div>
+        `
+    },
+    {
+        html: `
+            <div class="math-line"><strong>Step 5: Total contrastive loss</strong></div>
+            <div style="text-align: center; margin: 1rem 0; padding: 0.75rem; background: var(--surface-alt); border-radius: 6px;">
+                $\\mathcal{L} = \\frac{1}{2}\\left(\\mathcal{L}_{\\text{image→text}} + \\mathcal{L}_{\\text{text→image}}\\right) = \\frac{1}{2}(${f4(contrastiveLossRows)} + ${f4(contrastiveLossCols)}) = $ <span class="computed">${f4(contrastiveLossTotal)}</span>
+            </div>
+            <div class="explanation" style="border: none; padding: 0;">The symmetric loss ensures that matching works in both directions — an image should find its text <em>and</em> a text should find its image.</div>
+            <div class="math-line" style="margin-top: 0.75rem;"><strong>The key difference from classification:</strong></div>
+            <div class="explanation">In classification, the "classes" are fixed (cat/dog/fish). In contrastive learning, the "classes" are the <em>other items in the batch</em> — they change every batch. This is why contrastive learning scales with batch size: more items in the batch = more "negatives" to distinguish from = harder (and more informative) classification problem. CLIP used batch sizes of 32,768.</div>
+        `
+    }
+];
+
+function createStepper(steps, prevId, nextId, resetId, labelId, bodyId) {
+    let current = 0;
+    const body = document.getElementById(bodyId);
+    const prevBtn = document.getElementById(prevId);
+    const nextBtn = document.getElementById(nextId);
+    const resetBtn = document.getElementById(resetId);
+    const label = document.getElementById(labelId);
+
+    function render() {
+        body.innerHTML = steps[current].html;
+        label.textContent = `Step ${current + 1} / ${steps.length}`;
+        prevBtn.disabled = current === 0;
+        nextBtn.disabled = current === steps.length - 1;
+        renderMathInElement(body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });
+    }
+
+    prevBtn.addEventListener('click', () => { if (current > 0) { current--; render(); } });
+    nextBtn.addEventListener('click', () => { if (current < steps.length - 1) { current++; render(); } });
+    resetBtn.addEventListener('click', () => { current = 0; render(); });
+    render();
+}
+
+// ══════════════════════════════════════════════════
+// Init
+// ══════════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderMathInElement(document.body, {
+        delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false
+    });
+
+    createStepper(smSteps, 'sm-prev', 'sm-next', 'sm-reset', 'sm-step-label', 'sm-step-body');
+    createStepper(ceSteps, 'ce-prev', 'ce-next', 'ce-reset', 'ce-step-label', 'ce-step-body');
+    createStepper(gradSteps, 'gr-prev', 'gr-next', 'gr-reset', 'gr-step-label', 'gr-step-body');
+    createStepper(updateSteps, 'up-prev', 'up-next', 'up-reset', 'up-step-label', 'up-step-body');
+    createStepper(arSteps, 'ar-prev', 'ar-next', 'ar-reset', 'ar-step-label', 'ar-step-body');
+    createStepper(clSteps, 'cl-prev', 'cl-next', 'cl-reset', 'cl-step-label', 'cl-step-body');
+});
+</script>
+
+</body>
+</html>

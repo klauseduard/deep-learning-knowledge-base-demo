@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Vanishing & Exploding Gradients — Interactive Simulation</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    --bg: #fafaf8;
+    --surface: #ffffff;
+    --surface-alt: #f5f3ef;
+    --border: #e2ddd5;
+    --text: #2c2825;
+    --text-secondary: #6b6560;
+    --text-tertiary: #9a948e;
+    --accent: #3d6b9e;
+    --accent-light: #e8f0f8;
+    --success: #27864a;
+    --success-light: #e8f5ec;
+    --danger: #c0392b;
+    --danger-light: #fdeaea;
+    --warning: #b87a1a;
+    --warning-light: #fef6e8;
+    --purple: #7b5ea7;
+    --purple-light: #f0ebf5;
+    --teal: #1a7a7a;
+    --teal-light: #e6f4f4;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    grid-template-rows: auto 1fr;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ── Header ── */
+header {
+    grid-column: 1 / -1;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+}
+
+header h1 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.5rem;
+    margin-bottom: 0.2rem;
+}
+
+header .subtitle {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+    padding: 1.25rem;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    overflow-y: auto;
+}
+
+.control-group {
+    margin-bottom: 1.5rem;
+}
+
+.control-group-title {
+    font-family: 'Source Serif 4', serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.75rem;
+    color: var(--text);
+}
+
+.control-row {
+    margin-bottom: 0.6rem;
+}
+
+.control-row label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.2rem;
+}
+
+.control-row .slider-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.control-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+}
+
+.control-row .value-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    min-width: 36px;
+    text-align: right;
+    font-weight: 500;
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.radio-group input[type="radio"] {
+    accent-color: var(--accent);
+}
+
+.toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.toggle-row label {
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    appearance: none;
+    background: var(--border);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.toggle-switch:checked { background: var(--accent); }
+
+.toggle-switch::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+}
+
+.toggle-switch:checked::before { transform: translateX(18px); }
+
+.preset-btn {
+    display: block;
+    width: 100%;
+    padding: 0.45rem 0.75rem;
+    margin-bottom: 0.4rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--surface-alt);
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+}
+
+.preset-btn:hover {
+    background: var(--accent-light);
+    border-color: var(--accent);
+}
+
+.preset-btn .preset-label {
+    font-weight: 500;
+}
+
+.preset-btn .preset-desc {
+    color: var(--text-tertiary);
+    font-size: 0.75rem;
+}
+
+button.reset-btn {
+    display: block;
+    width: 100%;
+    padding: 0.4rem;
+    margin-top: 1rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+button.reset-btn:hover { background: var(--surface-alt); }
+
+/* ── Main content ── */
+.main {
+    padding: 1.5rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* Visualization panels */
+.viz-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.viz-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 1rem;
+    background: var(--surface-alt);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+}
+
+.viz-panel-title {
+    font-family: 'Source Serif 4', serif;
+    font-weight: 600;
+}
+
+.viz-panel-subtitle {
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+}
+
+.viz-panel canvas {
+    display: block;
+    width: 100%;
+}
+
+/* Stats row */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+}
+
+.stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    text-align: center;
+}
+
+.stat-card .stat-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.2rem;
+}
+
+.stat-card .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.stat-card.vanishing .stat-value { color: var(--accent); }
+.stat-card.exploding .stat-value { color: var(--danger); }
+.stat-card.healthy .stat-value { color: var(--success); }
+
+/* Hint */
+.hint {
+    background: var(--accent-light);
+    border-left: 3px solid var(--accent);
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    border-radius: 0 6px 6px 0;
+}
+
+.hint::before {
+    content: "What to notice: ";
+    font-weight: 600;
+    color: var(--accent);
+}
+
+/* Diagnosis banner */
+.diagnosis {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-align: center;
+}
+
+.diagnosis.healthy {
+    background: var(--success-light);
+    border: 1px solid var(--success);
+    color: var(--success);
+}
+
+.diagnosis.vanishing {
+    background: var(--accent-light);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+}
+
+.diagnosis.exploding {
+    background: var(--danger-light);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+}
+
+.diagnosis.mixed {
+    background: var(--warning-light);
+    border: 1px solid var(--warning);
+    color: var(--warning);
+}
+
+/* Explanation panel */
+.explanation-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.explanation-panel strong { color: var(--text); }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>Vanishing & Exploding Gradients</h1>
+    <div class="subtitle">Change the depth, activation, and initialization — watch the gradients grow, shrink, or stay stable.</div>
+</header>
+
+<div class="sidebar">
+    <div class="control-group">
+        <div class="control-group-title">Network</div>
+        <div class="control-row">
+            <label>Depth (hidden layers)</label>
+            <div class="slider-line">
+                <input type="range" id="depth" min="2" max="50" value="10">
+                <span class="value-display" id="depth-val">10</span>
+            </div>
+        </div>
+        <div class="control-row">
+            <label>Layer width (neurons per layer)</label>
+            <div class="slider-line">
+                <input type="range" id="width" min="4" max="64" value="16" step="4">
+                <span class="value-display" id="width-val">16</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="control-group">
+        <div class="control-group-title">Activation Function</div>
+        <div class="radio-group">
+            <label><input type="radio" name="activation" value="sigmoid"> Sigmoid &nbsp;<span style="color:var(--text-tertiary); font-size:0.75rem;">max deriv = 0.25</span></label>
+            <label><input type="radio" name="activation" value="tanh"> Tanh &nbsp;<span style="color:var(--text-tertiary); font-size:0.75rem;">max deriv = 1.0</span></label>
+            <label><input type="radio" name="activation" value="relu" checked> ReLU &nbsp;<span style="color:var(--text-tertiary); font-size:0.75rem;">deriv = 0 or 1</span></label>
+        </div>
+    </div>
+
+    <div class="control-group">
+        <div class="control-group-title">Initialization</div>
+        <div class="radio-group">
+            <label><input type="radio" name="init" value="naive"> Naive &nbsp;<span style="color:var(--text-tertiary); font-size:0.75rem;">N(0, 1)</span></label>
+            <label><input type="radio" name="init" value="xavier" checked> Xavier/Glorot &nbsp;<span style="color:var(--text-tertiary); font-size:0.75rem;">N(0, 1/n)</span></label>
+            <label><input type="radio" name="init" value="he"> He/Kaiming &nbsp;<span style="color:var(--text-tertiary); font-size:0.75rem;">N(0, 2/n)</span></label>
+        </div>
+    </div>
+
+    <div class="control-group">
+        <div class="control-group-title">Architectural Fixes</div>
+        <div class="toggle-row">
+            <input type="checkbox" class="toggle-switch" id="skip-connections">
+            <label for="skip-connections">Skip connections (residual)</label>
+        </div>
+        <div class="toggle-row">
+            <input type="checkbox" class="toggle-switch" id="layer-norm">
+            <label for="layer-norm">Layer normalization</label>
+        </div>
+    </div>
+
+    <div class="control-group">
+        <div class="control-group-title">Presets</div>
+        <button class="preset-btn" data-preset="classic-vanish">
+            <div class="preset-label">Classic vanishing</div>
+            <div class="preset-desc">30 layers, sigmoid, naive init</div>
+        </button>
+        <button class="preset-btn" data-preset="classic-explode">
+            <div class="preset-label">Classic exploding</div>
+            <div class="preset-desc">20 layers, tanh, naive init</div>
+        </button>
+        <button class="preset-btn" data-preset="relu-he">
+            <div class="preset-label">Modern baseline</div>
+            <div class="preset-desc">20 layers, ReLU, He init</div>
+        </button>
+        <button class="preset-btn" data-preset="resnet">
+            <div class="preset-label">ResNet-style</div>
+            <div class="preset-desc">50 layers, ReLU, He + skip + layernorm</div>
+        </button>
+        <button class="preset-btn" data-preset="deep-sigmoid-fixed">
+            <div class="preset-label">Deep sigmoid — fixed</div>
+            <div class="preset-desc">30 layers, sigmoid, Xavier + skip + layernorm</div>
+        </button>
+    </div>
+
+    <button class="reset-btn" id="reseed-btn">Re-roll random weights</button>
+</div>
+
+<div class="main">
+    <div id="diagnosis" class="diagnosis healthy">Gradients are healthy</div>
+
+    <div class="viz-panel">
+        <div class="viz-panel-header">
+            <span class="viz-panel-title">Gradient magnitude per layer</span>
+            <span class="viz-panel-subtitle" id="grad-subtitle">|∂L/∂h_l| — log scale</span>
+        </div>
+        <canvas id="grad-canvas" height="220"></canvas>
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-card" id="stat-first">
+            <div class="stat-label">First layer gradient</div>
+            <div class="stat-value" id="stat-first-val">—</div>
+        </div>
+        <div class="stat-card" id="stat-last">
+            <div class="stat-label">Last layer gradient</div>
+            <div class="stat-value" id="stat-last-val">—</div>
+        </div>
+        <div class="stat-card" id="stat-ratio">
+            <div class="stat-label">Ratio (first / last)</div>
+            <div class="stat-value" id="stat-ratio-val">—</div>
+        </div>
+        <div class="stat-card" id="stat-factor">
+            <div class="stat-label">Avg per-layer factor</div>
+            <div class="stat-value" id="stat-factor-val">—</div>
+        </div>
+    </div>
+
+    <div class="viz-panel">
+        <div class="viz-panel-header">
+            <span class="viz-panel-title">Activation magnitudes per layer</span>
+            <span class="viz-panel-subtitle">mean |h_l| — linear scale</span>
+        </div>
+        <canvas id="act-canvas" height="160"></canvas>
+    </div>
+
+    <div id="explanation" class="explanation-panel"></div>
+
+    <div class="hint" id="dynamic-hint">Try the "Classic vanishing" preset, then toggle on skip connections and watch the gradient bars recover.</div>
+</div>
+
+<script>
+// ── Seeded random (for reproducible re-rolls) ──
+let seed = 42;
+function mulberry32(a) {
+    return function() {
+        a |= 0; a = a + 0x6D2B79F5 | 0;
+        var t = Math.imul(a ^ a >>> 15, 1 | a);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+}
+let rng = mulberry32(seed);
+
+function randn() {
+    // Box-Muller
+    let u1 = rng(), u2 = rng();
+    while (u1 === 0) u1 = rng();
+    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+// ── Activation functions ──
+const activations = {
+    sigmoid: { fn: x => 1 / (1 + Math.exp(-Math.max(-500, Math.min(500, x)))), deriv: a => a * (1 - a), usesOutput: true },
+    tanh:    { fn: x => Math.tanh(x), deriv: a => 1 - a * a, usesOutput: true },
+    relu:    { fn: x => Math.max(0, x), deriv: (a, z) => z > 0 ? 1 : 0, usesOutput: false }
+};
+
+// ── Read controls ──
+function getConfig() {
+    const depth = parseInt(document.getElementById('depth').value);
+    const width = parseInt(document.getElementById('width').value);
+    const actName = document.querySelector('input[name="activation"]:checked').value;
+    const initName = document.querySelector('input[name="init"]:checked').value;
+    const skipConn = document.getElementById('skip-connections').checked;
+    const layerNorm = document.getElementById('layer-norm').checked;
+    return { depth, width, actName, initName, skipConn, layerNorm };
+}
+
+// ── Build network ──
+function buildNetwork(config) {
+    const { depth, width, actName, initName } = config;
+    const layers = [];
+
+    for (let l = 0; l < depth; l++) {
+        const fanIn = (l === 0) ? width : width;
+        const fanOut = width;
+        let scale;
+        if (initName === 'naive') scale = 1.0;
+        else if (initName === 'xavier') scale = Math.sqrt(1.0 / fanIn);
+        else scale = Math.sqrt(2.0 / fanIn); // he
+
+        const W = [];
+        for (let i = 0; i < fanOut; i++) {
+            const row = [];
+            for (let j = 0; j < fanIn; j++) {
+                row.push(randn() * scale);
+            }
+            W.push(row);
+        }
+        const b = new Array(fanOut).fill(0);
+        layers.push({ W, b });
+    }
+    return layers;
+}
+
+// ── Forward pass ──
+function forward(layers, x, config) {
+    const act = activations[config.actName];
+    const preActs = []; // z values (before activation)
+    const postActs = [x.slice()]; // h values (after activation)
+
+    let h = x.slice();
+    for (let l = 0; l < layers.length; l++) {
+        const { W, b } = layers[l];
+        const z = [];
+        for (let i = 0; i < W.length; i++) {
+            let sum = b[i];
+            for (let j = 0; j < h.length; j++) {
+                sum += W[i][j] * h[j];
+            }
+            z.push(sum);
+        }
+        preActs.push(z);
+
+        let a = z.map(v => act.fn(v));
+
+        // Layer norm
+        if (config.layerNorm) {
+            const mean = a.reduce((s, v) => s + v, 0) / a.length;
+            const variance = a.reduce((s, v) => s + (v - mean) ** 2, 0) / a.length;
+            const std = Math.sqrt(variance + 1e-5);
+            a = a.map(v => (v - mean) / std);
+        }
+
+        // Skip connection
+        if (config.skipConn && h.length === a.length) {
+            a = a.map((v, i) => v + h[i]);
+        }
+
+        postActs.push(a);
+        h = a;
+    }
+
+    return { preActs, postActs };
+}
+
+// ── Backward pass (compute gradient magnitudes per layer) ──
+function backward(layers, preActs, postActs, config) {
+    const act = activations[config.actName];
+    const L = layers.length;
+    const width = layers[0].W.length;
+
+    // Simple MSE loss: L = 0.5 * sum(h_L^2), so dL/dh_L = h_L
+    let delta = postActs[L].slice();
+
+    const gradMagnitudes = [];
+    const actMagnitudes = [];
+
+    // Activation magnitudes (forward)
+    for (let l = 0; l <= L; l++) {
+        const mag = postActs[l].reduce((s, v) => s + Math.abs(v), 0) / postActs[l].length;
+        actMagnitudes.push(mag);
+    }
+
+    // Gradient magnitudes (backward)
+    gradMagnitudes.push(vecNorm(delta));
+
+    for (let l = L - 1; l >= 0; l--) {
+        const { W } = layers[l];
+        const z = preActs[l];
+        const hPrev = postActs[l];
+        const hPost = postActs[l + 1];
+
+        // Through skip connection: gradient passes through addition (just adds)
+        // skip doesn't change delta itself, the residual branch gets delta too
+
+        // Through layer norm (simplified — treat as pass-through for gradient magnitude estimation)
+
+        // Through activation
+        const actDeriv = [];
+        for (let i = 0; i < width; i++) {
+            if (act.usesOutput) {
+                // For sigmoid/tanh, derive from the activated output (pre-skip, pre-layernorm)
+                const actOut = act.fn(z[i]);
+                actDeriv.push(act.deriv(actOut));
+            } else {
+                actDeriv.push(act.deriv(null, z[i]));
+            }
+        }
+
+        const deltaAct = delta.map((d, i) => d * actDeriv[i]);
+
+        // Through linear: delta_prev = W^T * deltaAct
+        const deltaPrev = new Array(hPrev.length).fill(0);
+        for (let j = 0; j < hPrev.length; j++) {
+            for (let i = 0; i < width; i++) {
+                deltaPrev[j] += W[i][j] * deltaAct[i];
+            }
+        }
+
+        // If skip connection, gradient also flows through identity
+        if (config.skipConn && deltaPrev.length === delta.length) {
+            for (let j = 0; j < deltaPrev.length; j++) {
+                deltaPrev[j] += delta[j];
+            }
+        }
+
+        delta = deltaPrev;
+        gradMagnitudes.push(vecNorm(delta));
+    }
+
+    gradMagnitudes.reverse();
+    return { gradMagnitudes, actMagnitudes };
+}
+
+function vecNorm(v) {
+    return Math.sqrt(v.reduce((s, x) => s + x * x, 0) / v.length);
+}
+
+// ── Simulation ──
+let cachedLayers = null;
+let cachedConfig = null;
+
+function simulate() {
+    const config = getConfig();
+
+    // Rebuild network if structure changed
+    if (!cachedLayers || !cachedConfig ||
+        cachedConfig.depth !== config.depth ||
+        cachedConfig.width !== config.width ||
+        cachedConfig.initName !== config.initName) {
+        rng = mulberry32(seed);
+        cachedLayers = buildNetwork(config);
+        cachedConfig = { ...config };
+    }
+
+    // Random input
+    const savedRng = rng;
+    rng = mulberry32(seed + 9999);
+    const x = Array.from({ length: config.width }, () => randn() * 0.5);
+    rng = savedRng;
+
+    const { preActs, postActs } = forward(cachedLayers, x, config);
+    const { gradMagnitudes, actMagnitudes } = backward(cachedLayers, preActs, postActs, config);
+
+    drawGradients(gradMagnitudes, config);
+    drawActivations(actMagnitudes, config);
+    updateStats(gradMagnitudes);
+    updateDiagnosis(gradMagnitudes, config);
+    updateExplanation(gradMagnitudes, config);
+}
+
+// ── Drawing: gradient bars (log scale) ──
+function drawGradients(mags, config) {
+    const canvas = document.getElementById('grad-canvas');
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = 220;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const pad = { top: 25, bottom: 30, left: 60, right: 20 };
+
+    ctx.clearRect(0, 0, W, H);
+
+    const n = mags.length;
+    if (n === 0) return;
+
+    // Log scale
+    const logMags = mags.map(m => m > 0 ? Math.log10(m + 1e-45) : -45);
+    const minLog = Math.min(...logMags, -10);
+    const maxLog = Math.max(...logMags, 2);
+    const logRange = maxLog - minLog || 1;
+
+    const plotW = W - pad.left - pad.right;
+    const plotH = H - pad.top - pad.bottom;
+    const barW = Math.max(2, Math.min(30, (plotW / n) * 0.7));
+    const gap = (plotW - barW * n) / (n + 1);
+
+    // Grid lines
+    ctx.strokeStyle = '#e8e4de';
+    ctx.lineWidth = 1;
+    ctx.font = '11px "JetBrains Mono"';
+    ctx.fillStyle = '#9a948e';
+    ctx.textAlign = 'right';
+
+    for (let exp = Math.ceil(minLog); exp <= Math.floor(maxLog); exp += Math.max(1, Math.floor(logRange / 6))) {
+        const y = pad.top + plotH * (1 - (exp - minLog) / logRange);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(W - pad.right, y);
+        ctx.stroke();
+        ctx.fillText(`10^${exp}`, pad.left - 6, y + 4);
+    }
+
+    // Zero line at log=0 (magnitude 1)
+    const zeroY = pad.top + plotH * (1 - (0 - minLog) / logRange);
+    if (zeroY > pad.top && zeroY < H - pad.bottom) {
+        ctx.strokeStyle = '#b0aaa2';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, zeroY);
+        ctx.lineTo(W - pad.right, zeroY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#6b6560';
+        ctx.fillText('1.0', pad.left - 6, zeroY + 4);
+    }
+
+    // Bars
+    for (let i = 0; i < n; i++) {
+        const x = pad.left + gap + i * (barW + gap);
+        const logVal = logMags[i];
+        const barH = plotH * Math.max(0.005, (logVal - minLog) / logRange);
+        const y = pad.top + plotH - barH;
+
+        // Color by health
+        let color;
+        if (logVal < -6) color = '#3d6b9e';      // vanishing (blue)
+        else if (logVal > 3) color = '#c0392b';   // exploding (red)
+        else color = '#27864a';                     // healthy (green)
+
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.roundRect(x, y, barW, barH, [2, 2, 0, 0]);
+        ctx.fill();
+    }
+
+    // X-axis labels
+    ctx.fillStyle = '#9a948e';
+    ctx.textAlign = 'center';
+    ctx.font = '10px "JetBrains Mono"';
+    const step = Math.max(1, Math.floor(n / 12));
+    for (let i = 0; i < n; i += step) {
+        const x = pad.left + gap + i * (barW + gap) + barW / 2;
+        ctx.fillText(`L${i}`, x, H - pad.bottom + 15);
+    }
+    // Always label last
+    if ((n - 1) % step !== 0) {
+        const x = pad.left + gap + (n - 1) * (barW + gap) + barW / 2;
+        ctx.fillText(`L${n - 1}`, x, H - pad.bottom + 15);
+    }
+}
+
+// ── Drawing: activation magnitudes ──
+function drawActivations(mags, config) {
+    const canvas = document.getElementById('act-canvas');
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = 160;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const pad = { top: 20, bottom: 30, left: 60, right: 20 };
+
+    ctx.clearRect(0, 0, W, H);
+
+    const n = mags.length;
+    if (n === 0) return;
+
+    const maxVal = Math.max(...mags, 0.1);
+    const plotW = W - pad.left - pad.right;
+    const plotH = H - pad.top - pad.bottom;
+
+    // Line chart
+    ctx.strokeStyle = '#3d6b9e';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+        const x = pad.left + (i / (n - 1)) * plotW;
+        const y = pad.top + plotH * (1 - mags[i] / maxVal);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Dots
+    ctx.fillStyle = '#3d6b9e';
+    for (let i = 0; i < n; i++) {
+        const x = pad.left + (i / (n - 1)) * plotW;
+        const y = pad.top + plotH * (1 - mags[i] / maxVal);
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Y axis
+    ctx.fillStyle = '#9a948e';
+    ctx.textAlign = 'right';
+    ctx.font = '10px "JetBrains Mono"';
+    const ySteps = 4;
+    for (let i = 0; i <= ySteps; i++) {
+        const val = (maxVal * i / ySteps);
+        const y = pad.top + plotH * (1 - i / ySteps);
+        ctx.strokeStyle = '#e8e4de';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(W - pad.right, y);
+        ctx.stroke();
+        ctx.fillText(val.toFixed(2), pad.left - 6, y + 4);
+    }
+
+    // X axis
+    ctx.textAlign = 'center';
+    const step = Math.max(1, Math.floor(n / 12));
+    for (let i = 0; i < n; i += step) {
+        const x = pad.left + (i / (n - 1)) * plotW;
+        ctx.fillText(`L${i}`, x, H - pad.bottom + 15);
+    }
+}
+
+// ── Stats ──
+function updateStats(mags) {
+    const first = mags[0];
+    const last = mags[mags.length - 1];
+    const ratio = last > 1e-45 ? first / last : (first > 0 ? Infinity : 0);
+    const factor = mags.length > 1 ? Math.pow(Math.max(1e-45, first / Math.max(1e-45, last)), 1 / (mags.length - 1)) : 1;
+
+    document.getElementById('stat-first-val').textContent = fmtSci(first);
+    document.getElementById('stat-last-val').textContent = fmtSci(last);
+    document.getElementById('stat-ratio-val').textContent = fmtSci(ratio);
+    document.getElementById('stat-factor-val').textContent = factor.toFixed(4);
+
+    // Color stats
+    const firstCard = document.getElementById('stat-first');
+    firstCard.className = 'stat-card ' + (first < 1e-6 ? 'vanishing' : first > 1e3 ? 'exploding' : 'healthy');
+    const ratioCard = document.getElementById('stat-ratio');
+    ratioCard.className = 'stat-card ' + (ratio < 1e-4 ? 'vanishing' : ratio > 1e4 ? 'exploding' : 'healthy');
+}
+
+function fmtSci(v) {
+    if (!isFinite(v)) return 'Inf';
+    if (v === 0) return '0';
+    if (Math.abs(v) >= 0.01 && Math.abs(v) < 1000) return v.toFixed(4);
+    return v.toExponential(2);
+}
+
+// ── Diagnosis ──
+function updateDiagnosis(mags, config) {
+    const el = document.getElementById('diagnosis');
+    const first = mags[0], last = mags[mags.length - 1];
+    const ratio = last > 1e-45 ? first / last : Infinity;
+
+    if (ratio < 1e-4 && first < 1e-6) {
+        el.className = 'diagnosis vanishing';
+        el.textContent = 'Vanishing gradients — early layers receive near-zero gradient signal';
+    } else if (ratio > 1e4 || first > 1e6) {
+        el.className = 'diagnosis exploding';
+        el.textContent = 'Exploding gradients — gradient magnitudes are growing uncontrollably';
+    } else if (first < 1e-3 && last > 1) {
+        el.className = 'diagnosis vanishing';
+        el.textContent = 'Vanishing gradients — significant decay from last to first layer';
+    } else if (mags.some(m => m > 1e6)) {
+        el.className = 'diagnosis exploding';
+        el.textContent = 'Exploding gradients — some layers have extreme gradient magnitudes';
+    } else if (mags.some(m => m === 0 || !isFinite(m))) {
+        el.className = 'diagnosis mixed';
+        el.textContent = 'Dead neurons detected — some gradient paths are completely blocked';
+    } else {
+        el.className = 'diagnosis healthy';
+        el.textContent = 'Gradients are healthy — magnitudes are stable across layers';
+    }
+}
+
+// ── Explanation ──
+function updateExplanation(mags, config) {
+    const el = document.getElementById('explanation');
+    const first = mags[0], last = mags[mags.length - 1];
+    const factor = mags.length > 1 ? Math.pow(Math.max(1e-45, first / Math.max(1e-45, last)), 1 / (mags.length - 1)) : 1;
+
+    let html = '';
+
+    if (config.actName === 'sigmoid') {
+        html += `<p><strong>Sigmoid</strong> has a maximum derivative of 0.25 (at $z = 0$). `;
+        if (!config.skipConn) {
+            html += `With ${config.depth} layers, the gradient is multiplied by at most $0.25^{${config.depth}} \\approx ${Math.pow(0.25, config.depth).toExponential(1)}$ from the activation alone. `;
+            html += `Even before considering the weight matrices, the signal decays exponentially.</p>`;
+        } else {
+            html += `But with skip connections, the gradient has an alternative path that bypasses the sigmoid entirely — it flows through the identity shortcut with derivative 1.</p>`;
+        }
+    } else if (config.actName === 'tanh') {
+        html += `<p><strong>Tanh</strong> has a maximum derivative of 1.0 (at $z = 0$), better than sigmoid's 0.25. `;
+        if (config.initName === 'naive') {
+            html += `But with naive initialization ($\\sigma = 1$), the pre-activations are large, pushing tanh into saturation where the derivative drops toward 0. `;
+            html += `The result looks similar to sigmoid — vanishing gradients.</p>`;
+        } else {
+            html += `With proper initialization keeping pre-activations near 0, the derivative stays close to 1 and gradients flow more stably.</p>`;
+        }
+    } else {
+        html += `<p><strong>ReLU</strong> has derivative exactly 1 for positive inputs and 0 for negative inputs. `;
+        html += `There is no saturation — the gradient either passes through unchanged or is blocked entirely. `;
+        if (config.initName === 'he') {
+            html += `He initialization is designed for ReLU: the factor of $\\sqrt{2/n}$ compensates for the fact that ReLU zeros out ~50% of neurons.</p>`;
+        } else if (config.initName === 'naive') {
+            html += `But naive initialization ($\\sigma = 1$) makes weights too large for this width, causing exploding activations and gradients.</p>`;
+        } else {
+            html += `Xavier initialization slightly underestimates the variance ReLU needs (it assumes linear activations), but often works in practice.</p>`;
+        }
+    }
+
+    if (config.skipConn) {
+        html += `<p><strong>Skip connections</strong> add the input directly to the output: $h_l = f(h_{l-1}) + h_{l-1}$. During backprop, the gradient flows through both the transformation branch (multiplied by the Jacobian of $f$) and the identity branch (multiplied by 1). Even if the transformation branch kills the gradient, the identity path preserves it. This is why ResNets can train with 100+ layers.</p>`;
+    }
+
+    if (config.layerNorm) {
+        html += `<p><strong>Layer normalization</strong> rescales activations to zero mean and unit variance at each layer. This prevents the activation magnitudes from drifting (growing or shrinking) across layers, which keeps the Jacobians well-conditioned and stabilizes gradient flow.</p>`;
+    }
+
+    html += `<p style="margin-top:0.5rem; color: var(--text-tertiary); font-size: 0.85rem;">Per-layer gradient attenuation factor: <strong>${factor.toFixed(4)}</strong> — values below 1 mean gradients shrink each layer, above 1 means they grow. Ideal is close to 1.0.</p>`;
+
+    el.innerHTML = html;
+    renderMathInElement(el, {
+        delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false
+    });
+}
+
+// ── Presets ──
+const presets = {
+    'classic-vanish': { depth: 30, width: 16, activation: 'sigmoid', init: 'naive', skip: false, norm: false },
+    'classic-explode': { depth: 20, width: 16, activation: 'tanh', init: 'naive', skip: false, norm: false },
+    'relu-he': { depth: 20, width: 16, activation: 'relu', init: 'he', skip: false, norm: false },
+    'resnet': { depth: 50, width: 16, activation: 'relu', init: 'he', skip: true, norm: true },
+    'deep-sigmoid-fixed': { depth: 30, width: 16, activation: 'sigmoid', init: 'xavier', skip: true, norm: true }
+};
+
+function applyPreset(name) {
+    const p = presets[name];
+    document.getElementById('depth').value = p.depth;
+    document.getElementById('depth-val').textContent = p.depth;
+    document.getElementById('width').value = p.width;
+    document.getElementById('width-val').textContent = p.width;
+    document.querySelector(`input[name="activation"][value="${p.activation}"]`).checked = true;
+    document.querySelector(`input[name="init"][value="${p.init}"]`).checked = true;
+    document.getElementById('skip-connections').checked = p.skip;
+    document.getElementById('layer-norm').checked = p.norm;
+    cachedLayers = null;
+    simulate();
+}
+
+// ── Event listeners ──
+document.getElementById('depth').addEventListener('input', e => {
+    document.getElementById('depth-val').textContent = e.target.value;
+    cachedLayers = null;
+    simulate();
+});
+
+document.getElementById('width').addEventListener('input', e => {
+    document.getElementById('width-val').textContent = e.target.value;
+    cachedLayers = null;
+    simulate();
+});
+
+document.querySelectorAll('input[name="activation"]').forEach(r => r.addEventListener('change', () => simulate()));
+document.querySelectorAll('input[name="init"]').forEach(r => {
+    r.addEventListener('change', () => { cachedLayers = null; simulate(); });
+});
+document.getElementById('skip-connections').addEventListener('change', () => simulate());
+document.getElementById('layer-norm').addEventListener('change', () => simulate());
+
+document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+});
+
+document.getElementById('reseed-btn').addEventListener('click', () => {
+    seed = Math.floor(Math.random() * 1000000);
+    cachedLayers = null;
+    simulate();
+});
+
+// ── Dynamic hint updates ──
+function updateHint(config) {
+    const el = document.getElementById('dynamic-hint');
+    if (config.actName === 'sigmoid' && !config.skipConn && config.depth > 15) {
+        el.textContent = 'Toggle on skip connections and watch the first-layer gradient jump from near-zero to a healthy magnitude.';
+    } else if (config.actName === 'sigmoid' && config.skipConn) {
+        el.textContent = 'Skip connections rescued sigmoid at depth ' + config.depth + '. Now try removing them and switching to ReLU + He init instead — a different solution to the same problem.';
+    } else if (config.actName === 'relu' && config.initName === 'naive') {
+        el.textContent = 'ReLU with naive init often explodes. Switch to He initialization — it was designed specifically for ReLU networks.';
+    } else if (config.actName === 'relu' && config.initName === 'he' && config.depth >= 40 && !config.skipConn) {
+        el.textContent = 'Even ReLU + He starts to degrade at high depth without skip connections. Toggle them on to see the difference.';
+    } else if (config.skipConn && config.layerNorm && config.depth >= 30) {
+        el.textContent = 'This is close to a modern architecture (ResNet / Transformer block pattern): activation + skip connections + normalization. Try increasing depth to 50 — it should stay stable.';
+    } else {
+        el.textContent = 'Try the presets on the left to see classic failure modes and their solutions. The "avg per-layer factor" tells you whether gradients are growing (>1) or shrinking (<1) per layer.';
+    }
+}
+
+// Wrap simulate to also update hints
+const origSimulate = simulate;
+simulate = function() {
+    origSimulate();
+    updateHint(getConfig());
+};
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', () => {
+    renderMathInElement(document.body, {
+        delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false
+    });
+    simulate();
+});
+
+// Polyfill roundRect for older browsers
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, radii) {
+        const r = radii[0] || 0;
+        this.moveTo(x + r, y);
+        this.lineTo(x + w - r, y);
+        this.quadraticCurveTo(x + w, y, x + w, y + r);
+        this.lineTo(x + w, y + h);
+        this.lineTo(x, y + h);
+        this.lineTo(x, y + r);
+        this.quadraticCurveTo(x, y, x + r, y);
+        this.closePath();
+    };
+}
+</script>
+
+</body>
+</html>

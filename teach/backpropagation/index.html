@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The Math of Backpropagation — From Derivatives to Autograd</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    --bg: #fafaf8;
+    --surface: #ffffff;
+    --surface-alt: #f5f3ef;
+    --border: #e2ddd5;
+    --text: #2c2825;
+    --text-secondary: #6b6560;
+    --text-tertiary: #9a948e;
+    --accent: #3d6b9e;
+    --accent-light: #e8f0f8;
+    --success: #27864a;
+    --success-light: #e8f5ec;
+    --danger: #c0392b;
+    --danger-light: #fdeaea;
+    --warning: #b87a1a;
+    --warning-light: #fef6e8;
+    --purple: #7b5ea7;
+    --purple-light: #f0ebf5;
+    --teal: #1a7a7a;
+    --teal-light: #e6f4f4;
+    --neutral: #6b6560;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 2rem 6rem;
+}
+
+h1 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+h2 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.5rem;
+    margin-top: 3rem;
+    margin-bottom: 1rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+}
+
+h3 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.2rem;
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+}
+
+p { margin-bottom: 1rem; }
+
+.subtitle {
+    color: var(--text-secondary);
+    font-size: 1.05rem;
+    margin-bottom: 2rem;
+}
+
+code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9em;
+    background: var(--surface-alt);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+}
+
+.hint {
+    background: var(--accent-light);
+    border-left: 3px solid var(--accent);
+    padding: 0.75rem 1rem;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+.hint::before {
+    content: "What to notice: ";
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.key-answer {
+    background: var(--success-light);
+    border-left: 3px solid var(--success);
+    padding: 0.75rem 1rem;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+}
+.key-answer::before {
+    content: "Key answer: ";
+    font-weight: 600;
+    color: var(--success);
+}
+
+.warning-box {
+    background: var(--warning-light);
+    border-left: 3px solid var(--warning);
+    padding: 0.75rem 1rem;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+}
+
+/* Interactive boxes */
+.interactive {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+}
+
+.interactive-title {
+    font-family: 'Source Serif 4', serif;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    color: var(--accent);
+}
+
+.slider-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0.5rem 0;
+}
+
+.slider-row label {
+    min-width: 80px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+}
+
+.slider-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+}
+
+.slider-row .value {
+    min-width: 50px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    text-align: right;
+    font-weight: 500;
+}
+
+.result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.result-card {
+    background: var(--surface-alt);
+    border-radius: 6px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.result-card .label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.35rem;
+}
+
+.result-card .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.3rem;
+    font-weight: 500;
+}
+
+/* Step-through */
+.step-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 1.5rem 0;
+}
+
+.step-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--surface-alt);
+    border-bottom: 1px solid var(--border);
+}
+
+.step-controls button {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+}
+
+.step-controls button:hover { background: var(--accent-light); }
+.step-controls button:disabled { opacity: 0.4; cursor: default; }
+.step-controls button:disabled:hover { background: var(--surface); }
+
+.step-controls .step-label {
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.step-body {
+    padding: 1.5rem;
+    min-height: 200px;
+}
+
+.step-body .math-line {
+    margin: 0.75rem 0;
+    padding: 0.5rem 0;
+}
+
+.step-body .explanation {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin: 0.5rem 0;
+    padding-left: 1rem;
+    border-left: 2px solid var(--border);
+}
+
+.step-body .computed {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--accent-light);
+    padding: 0.15em 0.4em;
+    border-radius: 3px;
+    font-weight: 500;
+}
+
+.highlight-forward { color: var(--accent); }
+.highlight-backward { color: var(--danger); }
+.highlight-gradient { color: var(--purple); }
+
+/* Comparison table */
+.compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+}
+
+.compare-table th, .compare-table td {
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--border);
+    text-align: left;
+}
+
+.compare-table th {
+    background: var(--surface-alt);
+    font-weight: 600;
+}
+
+.compare-table td:first-child { font-weight: 500; }
+
+/* Computational graph */
+.graph-container {
+    margin: 1.5rem 0;
+}
+
+.graph-container canvas {
+    display: block;
+    margin: 0 auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+/* TOC */
+.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin: 1.5rem 0;
+}
+
+.toc-title {
+    font-family: 'Source Serif 4', serif;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.toc ol {
+    padding-left: 1.5rem;
+}
+
+.toc li {
+    margin: 0.3rem 0;
+}
+
+.toc a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.toc a:hover { text-decoration: underline; }
+
+/* Diagram canvases */
+.diagram-canvas {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    margin-bottom: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.step-container.has-diagram {
+    border-top: none;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+</style>
+</head>
+<body>
+
+<h1>The Math of Backpropagation</h1>
+<p class="subtitle">From partial derivatives to automatic differentiation — with concrete numbers at every step.</p>
+
+<div class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+        <li><a href="#part1">Partial derivatives refresher</a></li>
+        <li><a href="#part2">The chain rule — derivatives of composed functions</a></li>
+        <li><a href="#part3">Backprop by hand — a complete numerical example</a></li>
+        <li><a href="#part4">How automatic differentiation actually works</a></li>
+        <li><a href="#part5">Three ways to compute derivatives — and why autodiff wins</a></li>
+    </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="part1">1. Partial Derivatives Refresher</h2>
+
+<p>A <strong>derivative</strong> tells you the rate of change. If $f(x) = x^2$, then $\frac{df}{dx} = 2x$ means: "at any point $x$, if you nudge $x$ by a tiny amount $\epsilon$, $f$ changes by approximately $2x \cdot \epsilon$."</p>
+
+<p>A <strong>partial derivative</strong> is the same idea when a function has multiple inputs. If $f(x, y) = x^2 y + 3y$, then:</p>
+
+<ul style="margin-bottom: 1rem;">
+    <li>$\frac{\partial f}{\partial x}$ = "how does $f$ change when I wiggle $x$, <em>holding $y$ fixed</em>?"</li>
+    <li>$\frac{\partial f}{\partial y}$ = "how does $f$ change when I wiggle $y$, <em>holding $x$ fixed</em>?"</li>
+</ul>
+
+<p>To compute $\frac{\partial f}{\partial x}$, treat $y$ as a constant and differentiate normally with respect to $x$:</p>
+
+<div style="text-align: center; margin: 1rem 0;">
+    $f(x, y) = x^2 y + 3y \quad \Rightarrow \quad \frac{\partial f}{\partial x} = 2xy \quad$ (the $3y$ term vanishes — it doesn't depend on $x$)
+</div>
+
+<div style="text-align: center; margin: 1rem 0;">
+    $\frac{\partial f}{\partial y} = x^2 + 3 \quad$ (the $x^2$ is treated as a constant multiplier of $y$)
+</div>
+
+<h3>Common derivative rules you'll need</h3>
+
+<table class="compare-table">
+    <tr><th>Function $f(x)$</th><th>Derivative $f'(x)$</th><th>Example</th></tr>
+    <tr><td>$c$ (constant)</td><td>$0$</td><td>$\frac{d}{dx}[5] = 0$</td></tr>
+    <tr><td>$x^n$</td><td>$n x^{n-1}$</td><td>$\frac{d}{dx}[x^3] = 3x^2$</td></tr>
+    <tr><td>$c \cdot g(x)$</td><td>$c \cdot g'(x)$</td><td>$\frac{d}{dx}[3x^2] = 6x$</td></tr>
+    <tr><td>$g(x) + h(x)$</td><td>$g'(x) + h'(x)$</td><td>$\frac{d}{dx}[x^2 + x] = 2x + 1$</td></tr>
+    <tr><td>$g(x) \cdot h(x)$</td><td>$g'h + gh'$</td><td>$\frac{d}{dx}[x \cdot x^2] = x^2 + 2x^2 = 3x^2$</td></tr>
+    <tr><td>$e^x$</td><td>$e^x$</td><td>$\frac{d}{dx}[e^x] = e^x$</td></tr>
+    <tr><td>$\frac{1}{x}$</td><td>$-\frac{1}{x^2}$</td><td>$\frac{d}{dx}[\frac{1}{x}]\big|_{x=2} = -0.25$</td></tr>
+    <tr><td>$\sigma(x) = \frac{1}{1 + e^{-x}}$</td><td>$\sigma(x)(1 - \sigma(x))$</td><td>$\sigma'(0) = 0.25$</td></tr>
+</table>
+
+<p>The sigmoid derivative is especially important for neural networks — we'll use it shortly. Notice that $\sigma'(x)$ can be computed from $\sigma(x)$ itself. This is a recurring pattern: many activation functions have derivatives that reuse the forward-pass output.</p>
+
+<div class="interactive" id="partial-demo">
+    <div class="interactive-title">Try it: partial derivatives of $f(x, y) = x^2 y + 3y$</div>
+    <div class="slider-row">
+        <label>x =</label>
+        <input type="range" id="pd-x" min="-3" max="3" step="0.1" value="2">
+        <span class="value" id="pd-x-val">2.0</span>
+    </div>
+    <div class="slider-row">
+        <label>y =</label>
+        <input type="range" id="pd-y" min="-3" max="3" step="0.1" value="1">
+        <span class="value" id="pd-y-val">1.0</span>
+    </div>
+    <div class="result-grid">
+        <div class="result-card">
+            <div class="label">$f(x, y) = x^2 y + 3y$</div>
+            <div class="value" id="pd-f">7.0</div>
+        </div>
+        <div class="result-card">
+            <div class="label">$\frac{\partial f}{\partial x} = 2xy$</div>
+            <div class="value" id="pd-dfdx">4.0</div>
+        </div>
+        <div class="result-card">
+            <div class="label">$\frac{\partial f}{\partial y} = x^2 + 3$</div>
+            <div class="value" id="pd-dfdy">7.0</div>
+        </div>
+        <div class="result-card">
+            <div class="label">Meaning: nudge $x$ by 0.01 →</div>
+            <div class="value" id="pd-nudge">f changes ≈ <span id="pd-nudge-val">0.04</span></div>
+        </div>
+    </div>
+    <div class="hint" style="margin-top: 1rem;">Move $x$ and $y$ and watch. When $y = 0$, the partial $\frac{\partial f}{\partial x}$ is zero regardless of $x$ — because $f$ depends on $x$ only through the $x^2 y$ term, which vanishes.</div>
+</div>
+
+<p>The collection of all partial derivatives is called the <strong>gradient</strong>:</p>
+
+<div style="text-align: center; margin: 1rem 0;">
+    $\nabla f = \left(\frac{\partial f}{\partial x}, \frac{\partial f}{\partial y}\right)$
+</div>
+
+<p>In neural networks, the gradient of the loss with respect to all parameters is exactly what we need to do gradient descent. The question is: how do we compute this efficiently when there are millions of parameters?</p>
+
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="part2">2. The Chain Rule — Derivatives of Composed Functions</h2>
+
+<p>Neural networks are <strong>compositions</strong> of functions — the output of one layer feeds into the next. To differentiate a composition, we need the <strong>chain rule</strong>.</p>
+
+<h3>Single-variable chain rule</h3>
+
+<p>If $y = f(g(x))$ — i.e., first apply $g$, then apply $f$ to the result — then:</p>
+
+<div style="text-align: center; margin: 1rem 0;">
+    $\frac{dy}{dx} = \frac{df}{dg} \cdot \frac{dg}{dx}$
+</div>
+
+<p>In words: the derivative of the whole thing = (derivative of the outer function) $\times$ (derivative of the inner function). Each evaluated at the appropriate point.</p>
+
+<div class="interactive">
+    <div class="interactive-title">Concrete example: $y = (3x + 1)^2$</div>
+    <p>Let $g(x) = 3x + 1$ (inner) and $f(u) = u^2$ (outer), so $y = f(g(x))$.</p>
+    <div style="margin: 1rem 0; padding: 1rem; background: var(--surface-alt); border-radius: 6px;">
+        <div class="math-line">$\frac{dg}{dx} = 3$ <span style="color: var(--text-secondary); margin-left: 1rem;">← derivative of inner function</span></div>
+        <div class="math-line">$\frac{df}{du} = 2u$ <span style="color: var(--text-secondary); margin-left: 1rem;">← derivative of outer function</span></div>
+        <div class="math-line">$\frac{dy}{dx} = \frac{df}{du}\bigg|_{u=g(x)} \cdot \frac{dg}{dx} = 2(3x+1) \cdot 3 = 6(3x+1)$ <span style="color: var(--text-secondary); margin-left: 1rem;">← chain rule</span></div>
+    </div>
+    <div class="slider-row">
+        <label>x =</label>
+        <input type="range" id="cr-x" min="-2" max="2" step="0.1" value="1">
+        <span class="value" id="cr-x-val">1.0</span>
+    </div>
+    <div class="result-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+        <div class="result-card">
+            <div class="label">$g(x) = 3x + 1$</div>
+            <div class="value" id="cr-g">4.0</div>
+        </div>
+        <div class="result-card">
+            <div class="label">$y = g(x)^2$</div>
+            <div class="value" id="cr-y">16.0</div>
+        </div>
+        <div class="result-card">
+            <div class="label">$\frac{dy}{dx} = 6(3x+1)$</div>
+            <div class="value" id="cr-dydx">24.0</div>
+        </div>
+    </div>
+</div>
+
+<h3>Multi-variable chain rule</h3>
+
+<p>This generalizes naturally. If $z$ depends on $x$ through multiple intermediate variables, we sum over all paths. For $z = f(a, b)$ where $a = g(x)$ and $b = h(x)$:</p>
+
+<div style="text-align: center; margin: 1rem 0;">
+    $\frac{dz}{dx} = \frac{\partial f}{\partial a} \cdot \frac{da}{dx} + \frac{\partial f}{\partial b} \cdot \frac{db}{dx}$
+</div>
+
+<p>This is the foundation of backpropagation: each node in the network receives gradient contributions from <em>all</em> the paths through which it affects the loss.</p>
+
+<div class="hint">The chain rule says: to find how the output depends on an input, multiply the local derivatives along each path from input to output, and add up all paths. Backpropagation is just an efficient way to do this multiplication and summation.</div>
+
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="part3">3. Backprop by Hand — A Complete Numerical Example</h2>
+
+<p>Let's work through a full forward and backward pass on the simplest possible neural network: <strong>one input, one hidden neuron with sigmoid activation, one output neuron (linear), and MSE loss</strong>.</p>
+
+<div style="text-align: center; margin: 1.5rem 0; padding: 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
+    <strong>Network:</strong><br>
+    $x \xrightarrow{w_1} z_1 = w_1 x + b_1 \xrightarrow{\sigma} a_1 = \sigma(z_1) \xrightarrow{w_2} \hat{y} = w_2 a_1 + b_2 \xrightarrow{\mathcal{L}} L = \tfrac{1}{2}(\hat{y} - y)^2$
+    <br><br>
+    <strong>Initial values:</strong> $x = 1.5$, $y_{\text{true}} = 0.8$, $w_1 = 0.5$, $b_1 = 0.1$, $w_2 = -0.3$, $b_2 = 0.4$
+</div>
+
+<p>Step through the forward pass first (computing every intermediate value), then the backward pass (computing every gradient).</p>
+
+<canvas id="bp-diagram" class="diagram-canvas" height="210"></canvas>
+<div class="step-container has-diagram" id="backprop-stepper">
+    <div class="step-controls">
+        <button id="bp-prev" disabled>← Prev</button>
+        <button id="bp-next">Next →</button>
+        <button id="bp-reset" style="margin-left: 0.5rem;">Reset</button>
+        <span class="step-label" id="bp-step-label">Step 1 / 11</span>
+    </div>
+    <div class="step-body" id="bp-step-body">
+        <!-- Filled by JS -->
+    </div>
+</div>
+
+<div class="hint">Notice the pattern in the backward pass: at each step, the gradient "flowing in" from downstream gets multiplied by the local derivative. This is the chain rule applied mechanically, one operation at a time.</div>
+
+<div class="warning-box">
+    <strong>Scope note:</strong> This example shows <strong>plain gradient computation</strong> on a single input-target pair — the core of what backpropagation does. In practice, <em>stochastic</em> gradient descent (SGD) computes gradients on a random <strong>mini-batch</strong> of examples (say, 32 or 256), averages them, and uses the average gradient for the parameter update. The stochastic noise from mini-batching turns out to be beneficial — it acts as implicit regularization and helps escape sharp minima. <a href="../gradient-descent/sgd-math.html">SGD by the Numbers</a> continues from here with a worked mini-batch example using this same network. The <a href="../gradient-descent/index.html">gradient descent interactive</a> covers the optimization side visually: learning rates, momentum, and optimizer comparison.
+</div>
+
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="part4">4. How Automatic Differentiation Actually Works</h2>
+
+<p>Here's the question you asked: <strong>is there real differentiation happening, or is it some kind of approximation?</strong></p>
+
+<div class="key-answer">Yes, there is real differentiation — but not the kind you did in calculus class. Autograd doesn't manipulate symbolic expressions and it doesn't use numerical approximations. It applies <strong>exact analytical derivative rules</strong> to each primitive operation, evaluated at the <strong>concrete numerical values</strong> from the forward pass.</div>
+
+<h3>The three kinds of differentiation</h3>
+
+<p>There are exactly three ways a computer can compute derivatives:</p>
+
+<table class="compare-table">
+<tr>
+    <th>Method</th>
+    <th>How it works</th>
+    <th>Exact?</th>
+    <th>Cost</th>
+</tr>
+<tr>
+    <td><strong>Numerical</strong><br>(finite differences)</td>
+    <td>Evaluate $\frac{f(x+\epsilon) - f(x)}{\epsilon}$ for small $\epsilon$</td>
+    <td>No — approximation with rounding errors</td>
+    <td>$O(n)$ forward passes for $n$ parameters</td>
+</tr>
+<tr>
+    <td><strong>Symbolic</strong><br>(CAS, like Mathematica)</td>
+    <td>Manipulate the expression algebraically: $\frac{d}{dx}[x^2] \rightarrow 2x$</td>
+    <td>Yes — exact symbolic expression</td>
+    <td>Expression can explode in size ("expression swell")</td>
+</tr>
+<tr>
+    <td><strong>Automatic</strong><br>(autograd)</td>
+    <td>Apply derivative rules to each op, propagate <strong>numbers</strong> (not expressions)</td>
+    <td>Yes — exact to floating-point precision</td>
+    <td>One backward pass, regardless of parameter count</td>
+</tr>
+</table>
+
+<h3>What autograd does, step by step</h3>
+
+<p><strong>During the forward pass</strong>, the framework records a <strong>computational graph</strong> — a DAG where each node is a primitive operation (add, multiply, exp, etc.) and each edge is a tensor value. Crucially, each node also knows its own local derivative rule.</p>
+
+<p><strong>During the backward pass</strong>, autograd walks this graph in reverse. At each node, it:</p>
+<ol style="margin: 0.75rem 0 0.75rem 1.5rem;">
+    <li>Receives the gradient of the loss w.r.t. its output (a number, not a symbol)</li>
+    <li>Multiplies by its local derivative (evaluated at the concrete values from the forward pass)</li>
+    <li>Passes the result to its input nodes</li>
+</ol>
+
+<p>This is the <strong>vector-Jacobian product</strong> (VJP): given an upstream gradient vector $\bar{v}$, compute $\bar{v} \cdot J$ where $J$ is the Jacobian of the local operation.</p>
+
+<h3>Seeing it on our example</h3>
+
+<p>Let's decompose our network into the primitive operations that autograd actually sees. Each operation has a known derivative rule — these are hard-coded in the framework (PyTorch has ~1000 of them).</p>
+
+<canvas id="ag-diagram" class="diagram-canvas" height="190"></canvas>
+<div class="step-container has-diagram" id="autograd-stepper">
+    <div class="step-controls">
+        <button id="ag-prev" disabled>← Prev</button>
+        <button id="ag-next">Next →</button>
+        <button id="ag-reset" style="margin-left: 0.5rem;">Reset</button>
+        <span class="step-label" id="ag-step-label">Step 1 / 14</span>
+    </div>
+    <div class="step-body" id="ag-step-body">
+        <!-- Filled by JS -->
+    </div>
+</div>
+
+<div class="key-answer">
+    So: every single derivative in backpropagation is a <strong>real, analytically correct derivative</strong> of a primitive function (multiply, add, sigmoid, square, ...), evaluated at a <strong>concrete number</strong>. There is no approximation. There is no symbolic manipulation of expressions. The chain rule is applied mechanically by multiplying these numerical local derivatives together in reverse order.
+</div>
+
+<h3>Why "automatic"?</h3>
+
+<p>The word "automatic" doesn't mean "approximate" or "magical." It means: <strong>the programmer only writes the forward computation, and the framework automatically constructs and executes the backward computation</strong>. Before autograd, researchers had to manually derive and implement the backward pass for every new architecture — tedious and error-prone. Autograd does this correctly and automatically by composing the known derivatives of primitive operations.</p>
+
+<div class="warning-box">
+    <strong>A subtle point:</strong> autograd computes derivatives that are exact in exact arithmetic. In practice, floating-point rounding introduces tiny errors — but these are the same rounding errors you'd get computing the derivative by hand and evaluating it. They're not an inherent limitation of the method, unlike finite differences where the approximation error is fundamental.
+</div>
+
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="part5">5. Three Ways to Compute Derivatives — Side by Side</h2>
+
+<p>To make the comparison concrete, let's compute $\frac{\partial L}{\partial w_1}$ for our example network using all three methods.</p>
+
+<div class="interactive">
+    <div class="interactive-title">Method 1: Numerical (finite differences)</div>
+    <div style="padding: 1rem; background: var(--surface-alt); border-radius: 6px;">
+        <div class="math-line">Pick $\epsilon = 0.0001$</div>
+        <div class="math-line">Forward pass with $w_1 = 0.5$: $L = 0.16498$ (computed earlier)</div>
+        <div class="math-line">Forward pass with $w_1 = 0.5001$: $L = 0.16491$</div>
+        <div class="math-line">$\frac{\partial L}{\partial w_1} \approx \frac{0.16491 - 0.16498}{0.0001} = \mathbf{-0.0710}$</div>
+    </div>
+    <p style="margin-top: 0.75rem; color: var(--text-secondary); font-size: 0.9rem;">Requires <strong>one extra forward pass per parameter</strong>. For a model with 1 billion parameters, that's 1 billion forward passes. Also introduces approximation error from the choice of $\epsilon$.</p>
+</div>
+
+<div class="interactive">
+    <div class="interactive-title">Method 2: Symbolic (pen and paper / CAS)</div>
+    <div style="padding: 1rem; background: var(--surface-alt); border-radius: 6px;">
+        <div class="math-line">$L = \frac{1}{2}\left(w_2 \cdot \sigma(w_1 x + b_1) + b_2 - y\right)^2$</div>
+        <div class="math-line" style="margin-top: 0.5rem;">$\frac{\partial L}{\partial w_1} = (w_2 \sigma(w_1 x + b_1) + b_2 - y) \cdot w_2 \cdot \sigma(w_1 x + b_1)(1 - \sigma(w_1 x + b_1)) \cdot x$</div>
+        <div class="math-line" style="margin-top: 0.5rem;">$= (-0.5740) \cdot (-0.3) \cdot (0.6682)(0.3318) \cdot 1.5 = \mathbf{-0.0573}$</div>
+    </div>
+    <p style="margin-top: 0.75rem; color: var(--text-secondary); font-size: 0.9rem;">Exact, but the expression grows combinatorially with network depth. For a 100-layer network, the symbolic expression would be unmanageably large. Also recomputes shared subexpressions — $\sigma(w_1 x + b_1)$ appears three times above.</p>
+</div>
+
+<div class="interactive">
+    <div class="interactive-title">Method 3: Automatic differentiation (what PyTorch does)</div>
+    <div style="padding: 1rem; background: var(--surface-alt); border-radius: 6px;">
+        <div class="math-line">Forward pass stores: $z_1 = 0.85$, $a_1 = 0.7003$, $\hat{y} = 0.1899$, $L = 0.1862$</div>
+        <div class="math-line" style="margin-top: 0.5rem;">Backward — each step is one multiplication of <em>numbers</em>:</div>
+        <div class="math-line">$\frac{\partial L}{\partial \hat{y}} = -0.6101$</div>
+        <div class="math-line">$\frac{\partial L}{\partial a_1} = -0.6101 \times (-0.3) = 0.1830$</div>
+        <div class="math-line">$\frac{\partial L}{\partial z_1} = 0.1830 \times 0.2099 = 0.0384$</div>
+        <div class="math-line">$\frac{\partial L}{\partial w_1} = 0.0384 \times 1.5 = \mathbf{0.0576}$</div>
+    </div>
+    <p style="margin-top: 0.75rem; color: var(--text-secondary); font-size: 0.9rem;"><strong>Exact</strong> (same as symbolic, up to float rounding), but works only with numbers — no expression manipulation. Cost: one backward pass computes gradients for <strong>all</strong> parameters simultaneously.</p>
+</div>
+
+<div class="hint">The numerical method gives a slightly different answer (-0.0710 vs. -0.0573/0.0576) because finite differences are inherently approximate. The symbolic and autodiff methods agree to floating-point precision — they're computing the same mathematical quantity, just via different computational strategies. (The small discrepancy between the symbolic and autodiff values here is purely float rounding in intermediate steps.)</div>
+
+<h3>Why reverse mode?</h3>
+
+<p>Automatic differentiation comes in two "modes":</p>
+
+<ul style="margin-bottom: 1rem;">
+    <li><strong>Forward mode</strong>: propagate derivatives <em>alongside</em> the forward computation. For each input variable, one forward pass gives the derivative of <em>all outputs</em> w.r.t. that <em>one input</em>. Cost: one pass per input variable.</li>
+    <li><strong>Reverse mode</strong>: propagate derivatives <em>backward</em> from the output. One backward pass gives the derivative of <em>one output</em> w.r.t. <em>all input variables</em>. Cost: one pass per output variable.</li>
+</ul>
+
+<p>Neural network training has <strong>one output</strong> (the scalar loss) and <strong>millions of input variables</strong> (the parameters). Reverse mode needs one backward pass. Forward mode would need one pass per parameter. This is why backpropagation — which is reverse-mode autodiff — is the efficient choice.</p>
+
+<div style="text-align: center; margin: 1.5rem 0; padding: 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
+    <strong>Forward mode:</strong> 1 output, $n$ parameters → $n$ passes 😰<br>
+    <strong>Reverse mode:</strong> 1 output, $n$ parameters → <strong>1 pass</strong> 🎉<br><br>
+    <span style="color: var(--text-secondary); font-size: 0.9rem;">For GPT-4 with ~1.8 trillion parameters, that's 1 pass vs. 1,800,000,000,000 passes.</span>
+</div>
+
+
+<script>
+// ── Part 1: Partial derivative demo ──
+function updatePartialDemo() {
+    const x = parseFloat(document.getElementById('pd-x').value);
+    const y = parseFloat(document.getElementById('pd-y').value);
+    document.getElementById('pd-x-val').textContent = x.toFixed(1);
+    document.getElementById('pd-y-val').textContent = y.toFixed(1);
+
+    const f = x*x*y + 3*y;
+    const dfdx = 2*x*y;
+    const dfdy = x*x + 3;
+
+    document.getElementById('pd-f').textContent = f.toFixed(3);
+    document.getElementById('pd-dfdx').textContent = dfdx.toFixed(3);
+    document.getElementById('pd-dfdy').textContent = dfdy.toFixed(3);
+    document.getElementById('pd-nudge-val').textContent = (dfdx * 0.01).toFixed(4);
+}
+document.getElementById('pd-x').addEventListener('input', updatePartialDemo);
+document.getElementById('pd-y').addEventListener('input', updatePartialDemo);
+
+// ── Part 2: Chain rule demo ──
+function updateChainRule() {
+    const x = parseFloat(document.getElementById('cr-x').value);
+    document.getElementById('cr-x-val').textContent = x.toFixed(1);
+
+    const g = 3*x + 1;
+    const y = g * g;
+    const dydx = 6 * (3*x + 1);
+
+    document.getElementById('cr-g').textContent = g.toFixed(2);
+    document.getElementById('cr-y').textContent = y.toFixed(2);
+    document.getElementById('cr-dydx').textContent = dydx.toFixed(2);
+}
+document.getElementById('cr-x').addEventListener('input', updateChainRule);
+
+// ── Helper: sigmoid ──
+function sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
+
+// ── Part 3: Backprop step-through ──
+const x_val = 1.5, y_true = 0.8, w1 = 0.5, b1 = 0.1, w2 = -0.3, b2 = 0.4;
+const z1 = w1 * x_val + b1;            // 0.85
+const a1 = sigmoid(z1);                 // ~0.7003
+const y_hat = w2 * a1 + b2;            // ~0.1899
+const loss = 0.5 * (y_hat - y_true)**2; // ~0.1862
+
+// Backward
+const dL_dyhat = y_hat - y_true;       // ~-0.6101
+const dL_dw2 = dL_dyhat * a1;          // ~-0.4272
+const dL_db2 = dL_dyhat;               // ~-0.6101
+const dL_da1 = dL_dyhat * w2;          // ~0.1830
+const sig_deriv = a1 * (1 - a1);       // ~0.2099
+const dL_dz1 = dL_da1 * sig_deriv;     // ~0.0384
+const dL_dw1 = dL_dz1 * x_val;         // ~0.0576
+const dL_db1 = dL_dz1;                 // ~0.0384
+
+// Update with learning rate 0.5
+const lr_bp = 0.5;
+const new_w1 = w1 - lr_bp * dL_dw1;
+const new_b1 = b1 - lr_bp * dL_db1;
+const new_w2 = w2 - lr_bp * dL_dw2;
+const new_b2 = b2 - lr_bp * dL_db2;
+
+// Recompute forward pass with updated params
+const new_z1 = new_w1 * x_val + new_b1;
+const new_a1 = sigmoid(new_z1);
+const new_yhat = new_w2 * new_a1 + new_b2;
+const new_loss = 0.5 * (new_yhat - y_true) ** 2;
+
+const bpSteps = [
+    {
+        title: 'Forward: compute z₁',
+        html: `
+            <div class="math-line"><strong class="highlight-forward">Forward pass — Step 1:</strong> Pre-activation of hidden neuron</div>
+            <div class="math-line">$z_1 = w_1 \\cdot x + b_1 = 0.5 \\times 1.5 + 0.1 = $ <span class="computed">${z1.toFixed(4)}</span></div>
+            <div class="explanation">Multiply input by weight, add bias. This is the linear transformation before the activation function.</div>
+        `
+    },
+    {
+        title: 'Forward: compute a₁',
+        html: `
+            <div class="math-line"><strong class="highlight-forward">Forward pass — Step 2:</strong> Activation of hidden neuron</div>
+            <div class="math-line">$a_1 = \\sigma(z_1) = \\sigma(${z1.toFixed(4)}) = \\frac{1}{1 + e^{-${z1.toFixed(4)}}} = $ <span class="computed">${a1.toFixed(4)}</span></div>
+            <div class="explanation">Apply sigmoid to squash into (0, 1). We store this value — we'll need it during the backward pass.</div>
+        `
+    },
+    {
+        title: 'Forward: compute ŷ',
+        html: `
+            <div class="math-line"><strong class="highlight-forward">Forward pass — Step 3:</strong> Network output</div>
+            <div class="math-line">$\\hat{y} = w_2 \\cdot a_1 + b_2 = (-0.3) \\times ${a1.toFixed(4)} + 0.4 = $ <span class="computed">${y_hat.toFixed(4)}</span></div>
+            <div class="explanation">The output neuron is linear (no activation). Our prediction is ${y_hat.toFixed(4)}, but the target is ${y_true}.</div>
+        `
+    },
+    {
+        title: 'Forward: compute loss',
+        html: `
+            <div class="math-line"><strong class="highlight-forward">Forward pass — Step 4:</strong> Loss</div>
+            <div class="math-line">$L = \\frac{1}{2}(\\hat{y} - y)^2 = \\frac{1}{2}(${y_hat.toFixed(4)} - ${y_true})^2 = \\frac{1}{2}(${(y_hat - y_true).toFixed(4)})^2 = $ <span class="computed">${loss.toFixed(4)}</span></div>
+            <div class="explanation">MSE loss with the $\\frac{1}{2}$ factor (makes the derivative cleaner). Forward pass is done — we have all the values we need.</div>
+        `
+    },
+    {
+        title: 'Backward: ∂L/∂ŷ',
+        html: `
+            <div class="math-line"><strong class="highlight-backward">Backward pass — Step 1:</strong> Gradient of loss w.r.t. prediction</div>
+            <div class="math-line">$\\frac{\\partial L}{\\partial \\hat{y}} = \\hat{y} - y = ${y_hat.toFixed(4)} - ${y_true} = $ <span class="computed">${dL_dyhat.toFixed(4)}</span></div>
+            <div class="explanation">The derivative of $\\frac{1}{2}(\\hat{y} - y)^2$ w.r.t. $\\hat{y}$ is $(\\hat{y} - y)$. The $\\frac{1}{2}$ cancels the power-rule's 2. This is the <strong>error signal</strong> (also called the <strong>upstream gradient</strong>) — the value that propagates backward through the network. It is distinct from the parameter gradients, which are stored for the weight update and don't propagate further.</div>
+        `
+    },
+    {
+        title: 'Backward: ∂L/∂w₂ and ∂L/∂b₂',
+        html: `
+            <div class="math-line"><strong class="highlight-backward">Backward pass — Step 2:</strong> Gradients for output layer parameters</div>
+            <div class="math-line">Since $\\hat{y} = w_2 \\cdot a_1 + b_2$:</div>
+            <div class="math-line">$\\frac{\\partial \\hat{y}}{\\partial w_2} = a_1 = ${a1.toFixed(4)}, \\quad \\frac{\\partial \\hat{y}}{\\partial b_2} = 1$</div>
+            <div class="math-line" style="margin-top: 0.5rem;"><strong>Chain rule:</strong></div>
+            <div class="math-line">$\\frac{\\partial L}{\\partial w_2} = \\frac{\\partial L}{\\partial \\hat{y}} \\cdot \\frac{\\partial \\hat{y}}{\\partial w_2} = (${dL_dyhat.toFixed(4)}) \\times ${a1.toFixed(4)} = $ <span class="computed">${dL_dw2.toFixed(4)}</span></div>
+            <div class="math-line">$\\frac{\\partial L}{\\partial b_2} = \\frac{\\partial L}{\\partial \\hat{y}} \\cdot 1 = $ <span class="computed">${dL_db2.toFixed(4)}</span></div>
+            <div class="explanation">Each parameter gradient = (error signal) × (local derivative). The "local derivative" of $w_2 \\cdot a_1 + b_2$ w.r.t. $w_2$ is $a_1$ — the value stored during the forward pass.</div>
+            <div class="explanation">These two gradients are <strong>stored for later</strong> — gradient descent will use them to update $w_2$ and $b_2$ after the backward pass is complete. They don't propagate further backward. The signal that continues flowing backward to the hidden layer is $\\frac{\\partial L}{\\partial a_1}$ — computed in the next step.</div>
+        `
+    },
+    {
+        title: 'Backward: ∂L/∂a₁',
+        html: `
+            <div class="math-line"><strong class="highlight-backward">Backward pass — Step 3:</strong> Gradient flowing into hidden neuron</div>
+            <div class="math-line">$\\frac{\\partial \\hat{y}}{\\partial a_1} = w_2 = -0.3$</div>
+            <div class="math-line" style="margin-top: 0.5rem;"><strong>Chain rule:</strong></div>
+            <div class="math-line">$\\frac{\\partial L}{\\partial a_1} = \\frac{\\partial L}{\\partial \\hat{y}} \\cdot \\frac{\\partial \\hat{y}}{\\partial a_1} = (${dL_dyhat.toFixed(4)}) \\times (-0.3) = $ <span class="computed">${dL_da1.toFixed(4)}</span></div>
+            <div class="explanation">This is the error signal (upstream gradient) arriving at the hidden neuron's output. Note the sign flip — negative weight reverses the direction.</div>
+        `
+    },
+    {
+        title: 'Backward: ∂L/∂z₁ (through sigmoid)',
+        html: `
+            <div class="math-line"><strong class="highlight-backward">Backward pass — Step 4:</strong> Gradient through the sigmoid activation</div>
+            <div class="math-line">The sigmoid derivative is $\\sigma'(z) = \\sigma(z)(1 - \\sigma(z))$:</div>
+            <div class="math-line">$\\sigma'(z_1) = a_1 (1 - a_1) = ${a1.toFixed(4)} \\times (1 - ${a1.toFixed(4)}) = $ <span class="computed">${sig_deriv.toFixed(4)}</span></div>
+            <div class="math-line" style="margin-top: 0.5rem;"><strong>Chain rule:</strong></div>
+            <div class="math-line">$\\frac{\\partial L}{\\partial z_1} = \\frac{\\partial L}{\\partial a_1} \\cdot \\sigma'(z_1) = ${dL_da1.toFixed(4)} \\times ${sig_deriv.toFixed(4)} = $ <span class="computed">${dL_dz1.toFixed(4)}</span></div>
+            <div class="explanation">The sigmoid "attenuates" the gradient — it multiplies by at most 0.25 (when $z = 0$). Here it multiplies by ${sig_deriv.toFixed(4)}. This is the vanishing gradient problem in action: each sigmoid layer shrinks the gradient.</div>
+        `
+    },
+    {
+        title: 'Backward: ∂L/∂w₁ and ∂L/∂b₁',
+        html: `
+            <div class="math-line"><strong class="highlight-backward">Backward pass — Step 5:</strong> Gradients for hidden layer parameters</div>
+            <div class="math-line">Since $z_1 = w_1 \\cdot x + b_1$:</div>
+            <div class="math-line">$\\frac{\\partial z_1}{\\partial w_1} = x = 1.5, \\quad \\frac{\\partial z_1}{\\partial b_1} = 1$</div>
+            <div class="math-line" style="margin-top: 0.5rem;"><strong>Chain rule:</strong></div>
+            <div class="math-line">$\\frac{\\partial L}{\\partial w_1} = \\frac{\\partial L}{\\partial z_1} \\cdot x = ${dL_dz1.toFixed(4)} \\times 1.5 = $ <span class="computed">${dL_dw1.toFixed(4)}</span></div>
+            <div class="math-line">$\\frac{\\partial L}{\\partial b_1} = \\frac{\\partial L}{\\partial z_1} \\cdot 1 = $ <span class="computed">${dL_db1.toFixed(4)}</span></div>
+            <div class="explanation">Same pattern as before: (error signal) × (local derivative of the linear operation). These are also <strong>stored for the update step</strong>. We've now computed and stored gradients for all 4 parameters — the backward pass is complete.</div>
+        `
+    },
+    {
+        title: 'The full gradient chain',
+        html: `
+            <div class="math-line"><strong class="highlight-gradient">The complete chain for $w_1$:</strong></div>
+            <div class="math-line" style="margin: 1rem 0;">$\\frac{\\partial L}{\\partial w_1} = \\underbrace{(\\hat{y} - y)}_{\\text{loss derivative}} \\cdot \\underbrace{w_2}_{\\text{output weight}} \\cdot \\underbrace{\\sigma'(z_1)}_{\\text{activation derivative}} \\cdot \\underbrace{x}_{\\text{input}}$</div>
+            <div class="math-line">$= (${dL_dyhat.toFixed(4)}) \\times (-0.3) \\times ${sig_deriv.toFixed(4)} \\times 1.5 = $ <span class="computed">${dL_dw1.toFixed(4)}</span></div>
+            <div class="explanation">Each factor corresponds to one link in the chain from $L$ back to $w_1$. Backpropagation computes this product incrementally — reusing intermediate results rather than expanding the full expression.</div>
+        `
+    },
+    {
+        title: 'Summary: all gradients',
+        html: `
+            <div class="math-line"><strong class="highlight-gradient">All parameter gradients:</strong></div>
+            <table class="compare-table" style="margin: 1rem 0;">
+                <tr><th>Parameter</th><th>Value</th><th>Gradient</th><th>Update direction</th></tr>
+                <tr><td>$w_1$</td><td>${w1}</td><td>${dL_dw1.toFixed(4)}</td><td>Increase slightly</td></tr>
+                <tr><td>$b_1$</td><td>${b1}</td><td>${dL_db1.toFixed(4)}</td><td>Increase slightly</td></tr>
+                <tr><td>$w_2$</td><td>${w2}</td><td>${dL_dw2.toFixed(4)}</td><td>Increase (make less negative)</td></tr>
+                <tr><td>$b_2$</td><td>${b2}</td><td>${dL_db2.toFixed(4)}</td><td>Increase</td></tr>
+            </table>
+            <div class="explanation">Now gradient descent uses these stored gradients to update each parameter: $w \\leftarrow w - \\eta \\cdot \\frac{\\partial L}{\\partial w}$, where $\\eta$ is the learning rate. The negative gradients for $w_2$ and $b_2$ mean we should increase them — pushing the prediction closer to the target of ${y_true}.</div>
+        `
+    },
+    {
+        title: 'The update: new parameters',
+        html: `
+            <div class="math-line"><strong class="highlight-update" style="color: var(--success);">Parameter update</strong> with learning rate $\\eta = ${lr_bp}$:</div>
+            <table class="compare-table" style="margin: 1rem 0;">
+                <tr><th>Parameter</th><th>Old</th><th>$- \\eta \\cdot \\text{grad}$</th><th>New</th></tr>
+                <tr><td>$w_1$</td><td>${w1.toFixed(4)}</td><td>${(-lr_bp * dL_dw1).toFixed(4)}</td><td><span class="computed">${new_w1.toFixed(4)}</span></td></tr>
+                <tr><td>$b_1$</td><td>${b1.toFixed(4)}</td><td>${(-lr_bp * dL_db1).toFixed(4)}</td><td><span class="computed">${new_b1.toFixed(4)}</span></td></tr>
+                <tr><td>$w_2$</td><td>${w2.toFixed(4)}</td><td>${(-lr_bp * dL_dw2).toFixed(4)}</td><td><span class="computed">${new_w2.toFixed(4)}</span></td></tr>
+                <tr><td>$b_2$</td><td>${b2.toFixed(4)}</td><td>${(-lr_bp * dL_db2).toFixed(4)}</td><td><span class="computed">${new_b2.toFixed(4)}</span></td></tr>
+            </table>
+            <div class="math-line" style="margin-top: 0.75rem;"><strong>Verify — forward pass with updated parameters:</strong></div>
+            <div class="math-line">$\\hat{y}_{\\text{new}} = $ <span class="computed">${new_yhat.toFixed(4)}</span> <span style="color: var(--text-secondary);">(was ${y_hat.toFixed(4)}, target is ${y_true})</span></div>
+            <div class="math-line">$L_{\\text{new}} = $ <span class="computed">${new_loss.toFixed(4)}</span> <span style="color: var(--text-secondary);">(was ${loss.toFixed(4)})</span></div>
+            <div class="explanation">The prediction moved from ${y_hat.toFixed(4)} to ${new_yhat.toFixed(4)}, closer to the target ${y_true}. The loss dropped from ${loss.toFixed(4)} to ${new_loss.toFixed(4)} — one step of gradient descent worked. Repeat this forward-backward-update loop thousands of times and the network learns. In practice, <a href="../gradient-descent/sgd-math.html">stochastic gradient descent</a> averages gradients over a mini-batch of examples before each update.</div>
+        `
+    }
+];
+
+// ── Part 4: Autograd step-through ──
+const agSteps = [
+    {
+        title: 'Building the computational graph',
+        html: `
+            <div class="math-line"><strong>The computational graph</strong> — what autograd actually records</div>
+            <div class="explanation" style="border: none; padding: 0;">Instead of seeing "a neural network layer," autograd sees a chain of <strong>primitive operations</strong>. Each operation has a known, hard-coded derivative rule.</div>
+            <div style="margin: 1rem 0; padding: 1rem; background: var(--surface-alt); border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; line-height: 2;">
+                <span style="color: var(--accent);">node 1:</span> t₁ = mul(w₁, x) &nbsp;&nbsp;&nbsp;&nbsp; <span style="color: var(--text-tertiary);">← derivative of mul(a,b) w.r.t. a is b, w.r.t. b is a</span><br>
+                <span style="color: var(--accent);">node 2:</span> z₁ = add(t₁, b₁) &nbsp;&nbsp;&nbsp; <span style="color: var(--text-tertiary);">← derivative of add(a,b) w.r.t. both is 1</span><br>
+                <span style="color: var(--accent);">node 3:</span> a₁ = sigmoid(z₁) &nbsp;&nbsp; <span style="color: var(--text-tertiary);">← derivative is σ(z)(1−σ(z))</span><br>
+                <span style="color: var(--accent);">node 4:</span> t₂ = mul(w₂, a₁) &nbsp;&nbsp;&nbsp; <span style="color: var(--text-tertiary);">← same rule as node 1</span><br>
+                <span style="color: var(--accent);">node 5:</span> ŷ = add(t₂, b₂) &nbsp;&nbsp;&nbsp;&nbsp; <span style="color: var(--text-tertiary);">← same rule as node 2</span><br>
+                <span style="color: var(--accent);">node 6:</span> d = sub(ŷ, y) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span style="color: var(--text-tertiary);">← derivative w.r.t. first arg is 1</span><br>
+                <span style="color: var(--accent);">node 7:</span> d² = square(d) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span style="color: var(--text-tertiary);">← derivative of x² is 2x</span><br>
+                <span style="color: var(--accent);">node 8:</span> L = mul(0.5, d²) &nbsp;&nbsp;&nbsp; <span style="color: var(--text-tertiary);">← derivative w.r.t. d² is 0.5</span>
+            </div>
+            <div class="explanation">Only 4 distinct operations (mul, add, sigmoid, square) and each has a trivial derivative. This is all that autograd needs.</div>
+        `
+    },
+    {
+        title: 'Forward: execute and store',
+        html: `
+            <div class="math-line"><strong>Forward pass</strong> — execute each node, store the results</div>
+            <div style="margin: 1rem 0; padding: 1rem; background: var(--surface-alt); border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; line-height: 2;">
+                t₁ = mul(0.5, 1.5) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = <strong>0.75</strong> &nbsp;&nbsp; <span style="color: var(--text-tertiary);">stored</span><br>
+                z₁ = add(0.75, 0.1) &nbsp;&nbsp;&nbsp;&nbsp; = <strong>0.85</strong> &nbsp;&nbsp; <span style="color: var(--text-tertiary);">stored</span><br>
+                a₁ = sigmoid(0.85) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = <strong>0.7003</strong> <span style="color: var(--text-tertiary);">stored</span><br>
+                t₂ = mul(−0.3, 0.7003) &nbsp; = <strong>−0.2101</strong> <span style="color: var(--text-tertiary);">stored</span><br>
+                ŷ  = add(−0.2101, 0.4) &nbsp; = <strong>0.1899</strong> <span style="color: var(--text-tertiary);">stored</span><br>
+                d  = sub(0.1899, 0.8) &nbsp;&nbsp; = <strong>−0.6101</strong> <span style="color: var(--text-tertiary);">stored</span><br>
+                d² = square(−0.6101) &nbsp;&nbsp;&nbsp; = <strong>0.3722</strong> <span style="color: var(--text-tertiary);">stored</span><br>
+                L  = mul(0.5, 0.3722) &nbsp;&nbsp; = <strong>0.1861</strong> <span style="color: var(--text-tertiary);">stored</span>
+            </div>
+            <div class="explanation">These stored values are critical — the backward pass needs them to evaluate the local derivatives at the right points.</div>
+        `
+    },
+    {
+        title: 'Backward node 8: mul(0.5, d²) → L',
+        html: `
+            <div class="math-line"><strong class="highlight-backward">Backward — Node 8:</strong> <code>L = mul(0.5, d²)</code></div>
+            <div class="explanation" style="border-color: var(--danger);">Derivative rule for $\\text{mul}(a, b)$: $\\frac{\\partial}{\\partial a} = b$, &nbsp; $\\frac{\\partial}{\\partial b} = a$</div>
+            <div class="math-line">Error signal (upstream gradient): $\\frac{\\partial L}{\\partial L} = 1$ <span style="color: var(--text-secondary);">(starting point — always 1)</span></div>
+            <div class="math-line">Local derivative w.r.t. $d^2$: $0.5$ <span style="color: var(--text-secondary);">(the other input to mul)</span></div>
+            <div class="math-line">Pass downstream: $1 \\times 0.5 = $ <span class="computed">0.5</span></div>
+        `
+    },
+    {
+        title: 'Backward node 7: square(d) → d²',
+        html: `
+            <div class="math-line"><strong class="highlight-backward">Backward — Node 7:</strong> <code>d² = square(d)</code></div>
+            <div class="explanation" style="border-color: var(--danger);">Derivative rule for $\\text{square}(x)$: $\\frac{\\partial}{\\partial x} = 2x$</div>
+            <div class="math-line">Upstream gradient: <span class="computed">0.5</span> <span style="color: var(--text-secondary);">(from node 8)</span></div>
+            <div class="math-line">Local derivative: $2 \\times d = 2 \\times (-0.6101) = -1.2202$</div>
+            <div class="math-line">Pass downstream: $0.5 \\times (-1.2202) = $ <span class="computed">−0.6101</span></div>
+            <div class="explanation">Look — we got $\\hat{y} - y$ directly. The $\\frac{1}{2}$ and the square's $2$ cancelled. That's why MSE uses the $\\frac{1}{2}$ factor.</div>
+        `
+    },
+    {
+        title: 'Backward node 6: sub(ŷ, y) → d',
+        html: `
+            <div class="math-line"><strong class="highlight-backward">Backward — Node 6:</strong> <code>d = sub(ŷ, y)</code></div>
+            <div class="explanation" style="border-color: var(--danger);">Derivative rule for $\\text{sub}(a, b) = a - b$: $\\frac{\\partial}{\\partial a} = 1$, &nbsp; $\\frac{\\partial}{\\partial b} = -1$</div>
+            <div class="math-line">Upstream gradient: <span class="computed">−0.6101</span></div>
+            <div class="math-line">Local derivative w.r.t. $\\hat{y}$: $1$</div>
+            <div class="math-line">Pass to $\\hat{y}$: $(-0.6101) \\times 1 = $ <span class="computed">−0.6101</span></div>
+            <div class="explanation">$y$ is a constant (the target), so autograd doesn't propagate to it.</div>
+        `
+    },
+    {
+        title: 'Backward node 5: add(t₂, b₂) → ŷ',
+        html: `
+            <div class="math-line"><strong class="highlight-backward">Backward — Node 5:</strong> <code>ŷ = add(t₂, b₂)</code></div>
+            <div class="explanation" style="border-color: var(--danger);">Derivative rule for $\\text{add}(a, b)$: $\\frac{\\partial}{\\partial a} = 1$, &nbsp; $\\frac{\\partial}{\\partial b} = 1$</div>
+            <div class="math-line">Upstream gradient: <span class="computed">−0.6101</span></div>
+            <div class="math-line">Pass to $t_2$: $(-0.6101) \\times 1 = $ <span class="computed">−0.6101</span></div>
+            <div class="math-line">Pass to $b_2$: $(-0.6101) \\times 1 = $ <span class="computed">−0.6101</span> &nbsp; ← <strong class="highlight-gradient">$\\frac{\\partial L}{\\partial b_2}$</strong></div>
+            <div class="explanation">$b_2$ is a leaf parameter — its gradient is final: $\\frac{\\partial L}{\\partial b_2} = -0.6101$. Addition distributes the upstream gradient equally to both inputs.</div>
+        `
+    },
+    {
+        title: 'Backward node 4: mul(w₂, a₁) → t₂',
+        html: `
+            <div class="math-line"><strong class="highlight-backward">Backward — Node 4:</strong> <code>t₂ = mul(w₂, a₁)</code></div>
+            <div class="explanation" style="border-color: var(--danger);">Derivative rule for $\\text{mul}(a, b)$: $\\frac{\\partial}{\\partial a} = b$, &nbsp; $\\frac{\\partial}{\\partial b} = a$</div>
+            <div class="math-line">Upstream gradient: <span class="computed">−0.6101</span></div>
+            <div class="math-line">Pass to $w_2$: $(-0.6101) \\times a_1 = (-0.6101) \\times 0.7003 = $ <span class="computed">−0.4273</span> &nbsp; ← <strong class="highlight-gradient">$\\frac{\\partial L}{\\partial w_2}$</strong></div>
+            <div class="math-line">Pass to $a_1$: $(-0.6101) \\times w_2 = (-0.6101) \\times (-0.3) = $ <span class="computed">0.1830</span></div>
+            <div class="explanation">This is the key insight of mul's backward: the gradient w.r.t. one input uses the <em>other</em> input's stored forward value. That's why the forward values must be kept in memory.</div>
+        `
+    },
+    {
+        title: 'Backward node 3: sigmoid(z₁) → a₁',
+        html: `
+            <div class="math-line"><strong class="highlight-backward">Backward — Node 3:</strong> <code>a₁ = sigmoid(z₁)</code></div>
+            <div class="explanation" style="border-color: var(--danger);">Derivative rule for $\\sigma(x)$: $\\sigma(x)(1 - \\sigma(x))$</div>
+            <div class="math-line">Upstream gradient: <span class="computed">0.1830</span></div>
+            <div class="math-line">Local derivative: $a_1 \\times (1 - a_1) = 0.7003 \\times 0.2997 = 0.2099$</div>
+            <div class="math-line">Pass to $z_1$: $0.1830 \\times 0.2099 = $ <span class="computed">0.0384</span></div>
+            <div class="explanation">The sigmoid derivative reuses $a_1$ (the forward output). Maximum value is 0.25 at $z = 0$. Here it's 0.2099 — the gradient is attenuated but not killed.</div>
+        `
+    },
+    {
+        title: 'Backward node 2: add(t₁, b₁) → z₁',
+        html: `
+            <div class="math-line"><strong class="highlight-backward">Backward — Node 2:</strong> <code>z₁ = add(t₁, b₁)</code></div>
+            <div class="explanation" style="border-color: var(--danger);">Derivative rule for $\\text{add}(a, b)$: both partials are $1$</div>
+            <div class="math-line">Upstream gradient: <span class="computed">0.0384</span></div>
+            <div class="math-line">Pass to $t_1$: $0.0384 \\times 1 = $ <span class="computed">0.0384</span></div>
+            <div class="math-line">Pass to $b_1$: $0.0384 \\times 1 = $ <span class="computed">0.0384</span> &nbsp; ← <strong class="highlight-gradient">$\\frac{\\partial L}{\\partial b_1}$</strong></div>
+        `
+    },
+    {
+        title: 'Backward node 1: mul(w₁, x) → t₁',
+        html: `
+            <div class="math-line"><strong class="highlight-backward">Backward — Node 1:</strong> <code>t₁ = mul(w₁, x)</code></div>
+            <div class="explanation" style="border-color: var(--danger);">Derivative rule for $\\text{mul}(a, b)$: $\\frac{\\partial}{\\partial a} = b$, &nbsp; $\\frac{\\partial}{\\partial b} = a$</div>
+            <div class="math-line">Upstream gradient: <span class="computed">0.0384</span></div>
+            <div class="math-line">Pass to $w_1$: $0.0384 \\times x = 0.0384 \\times 1.5 = $ <span class="computed">0.0576</span> &nbsp; ← <strong class="highlight-gradient">$\\frac{\\partial L}{\\partial w_1}$</strong></div>
+            <div class="math-line">Pass to $x$: $0.0384 \\times w_1 = 0.0384 \\times 0.5 = 0.0192$ <span style="color: var(--text-secondary);">(not needed — $x$ is input data, not a parameter)</span></div>
+        `
+    },
+    {
+        title: 'Summary: what autograd computed',
+        html: `
+            <div class="math-line"><strong class="highlight-gradient">All parameter gradients — identical to our manual computation:</strong></div>
+            <table class="compare-table" style="margin: 1rem 0;">
+                <tr><th>Parameter</th><th>Manual (Part 3)</th><th>Autograd (Part 4)</th><th>Match?</th></tr>
+                <tr><td>$\\partial L / \\partial w_1$</td><td>${dL_dw1.toFixed(4)}</td><td>0.0576</td><td>✓</td></tr>
+                <tr><td>$\\partial L / \\partial b_1$</td><td>${dL_db1.toFixed(4)}</td><td>0.0384</td><td>✓</td></tr>
+                <tr><td>$\\partial L / \\partial w_2$</td><td>${dL_dw2.toFixed(4)}</td><td>−0.4273</td><td>✓</td></tr>
+                <tr><td>$\\partial L / \\partial b_2$</td><td>${dL_db2.toFixed(4)}</td><td>−0.6101</td><td>✓</td></tr>
+            </table>
+            <div class="explanation">Autograd and manual computation are mathematically identical — both apply the chain rule. The only difference is organizational: manual groups operations by "layer," autograd processes each primitive operation individually. The results are the same because the chain rule is associative — you can group the multiplications however you like.</div>
+        `
+    },
+    {
+        title: 'The pattern',
+        html: `
+            <div class="math-line"><strong>The universal autograd pattern at every node:</strong></div>
+            <div style="text-align: center; margin: 1.5rem 0; padding: 1.25rem; background: var(--surface-alt); border-radius: 8px; font-size: 1.1rem;">
+                $\\text{gradient}_\\text{input} = \\text{gradient}_\\text{output} \\times \\text{local derivative}$
+            </div>
+            <div class="math-line">Every node does the same thing:</div>
+            <ol style="margin: 0.75rem 0 0.75rem 1.5rem;">
+                <li>Receive a <strong>number</strong> (the error signal from downstream)</li>
+                <li>Multiply by a <strong>number</strong> (local derivative, evaluated using stored forward values)</li>
+                <li>Pass the resulting <strong>number</strong> upstream</li>
+            </ol>
+            <div class="explanation">No symbols. No expressions. Just numbers multiplied together in the right order. That's all backpropagation is.</div>
+        `
+    },
+    {
+        title: 'What the framework actually stores',
+        html: `
+            <div class="math-line"><strong>What PyTorch needs per operation:</strong></div>
+            <table class="compare-table" style="margin: 1rem 0;">
+                <tr><th>Operation</th><th>Forward rule</th><th>Backward rule (VJP)</th><th>Needs to store</th></tr>
+                <tr><td><code>add(a, b)</code></td><td>$a + b$</td><td>$\\bar{v} \\to (\\bar{v},\\; \\bar{v})$</td><td>Nothing</td></tr>
+                <tr><td><code>mul(a, b)</code></td><td>$a \\cdot b$</td><td>$\\bar{v} \\to (\\bar{v} \\cdot b,\\; \\bar{v} \\cdot a)$</td><td>Both inputs</td></tr>
+                <tr><td><code>sigmoid(x)</code></td><td>$\\sigma(x)$</td><td>$\\bar{v} \\to \\bar{v} \\cdot \\sigma(x)(1 - \\sigma(x))$</td><td>Output $\\sigma(x)$</td></tr>
+                <tr><td><code>square(x)</code></td><td>$x^2$</td><td>$\\bar{v} \\to \\bar{v} \\cdot 2x$</td><td>Input $x$</td></tr>
+                <tr><td><code>relu(x)</code></td><td>$\\max(0, x)$</td><td>$\\bar{v} \\to \\bar{v} \\cdot \\mathbf{1}_{x > 0}$</td><td>Sign of $x$</td></tr>
+                <tr><td><code>matmul(A, B)</code></td><td>$AB$</td><td>$\\bar{V} \\to (\\bar{V}B^T,\\; A^T\\bar{V})$</td><td>Both inputs</td></tr>
+            </table>
+            <div class="explanation">$\\bar{v}$ is the upstream gradient. PyTorch has ~1000 of these rules, one for each primitive op. Each is a simple, hand-derived analytical derivative formula. This is why autograd is both <strong>exact</strong> (real derivatives) and <strong>efficient</strong> (just numbers, not expressions).</div>
+        `
+    }
+];
+
+// ══════════════════════════════════════════════════════
+// PART 3 DIAGRAM — Network pipeline
+// ══════════════════════════════════════════════════════
+
+function drawBpDiagram(step) {
+    const canvas = document.getElementById('bp-diagram');
+    const parent = canvas.parentElement;
+    canvas.width = parent.clientWidth;
+    canvas.height = 210;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const dpr = window.devicePixelRatio || 1;
+    // Use logical pixels; CSS handles display size
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // ── Layout ──
+    const midY = 88;
+    const paramY = midY + 56;
+    const gradY = midY - 50;
+    const nodeR = 22;
+    const opW = 68, opH = 32;
+
+    // 5 value nodes, 4 operation boxes between them
+    const nodes = [
+        { id: 'x',    label: 'x',  x: 0 },
+        { id: 'z1',   label: 'z₁', x: 0 },
+        { id: 'a1',   label: 'a₁', x: 0 },
+        { id: 'yhat', label: 'y\u0302', x: 0 },
+        { id: 'L',    label: 'L',  x: 0 },
+    ];
+    const ops = [
+        { label: 'w₁x + b₁', x: 0 },
+        { label: 'σ(·)',      x: 0 },
+        { label: 'w₂a₁ + b₂', x: 0 },
+        { label: '½(·−y)²',  x: 0 },
+    ];
+
+    // Distribute evenly
+    const pad = 55;
+    const totalW = W - 2 * pad;
+    const spacing = totalW / (nodes.length - 1);
+    for (let i = 0; i < nodes.length; i++) nodes[i].x = pad + i * spacing;
+    for (let i = 0; i < ops.length; i++) ops[i].x = (nodes[i].x + nodes[i + 1].x) / 2;
+
+    // ── Parameters hanging below ops 0 and 2 ──
+    const params = [
+        { label: 'w₁=0.5', label2: 'b₁=0.1', opIdx: 0 },
+        { label: 'w₂=−0.3', label2: 'b₂=0.4', opIdx: 2 },
+    ];
+
+    // Values revealed per forward step (steps 0-3)
+    const fwdValues = ['1.5', z1.toFixed(2), a1.toFixed(4), y_hat.toFixed(4), loss.toFixed(4)];
+    // Which value nodes are revealed at each step
+    const fwdReveal = [1, 2, 3, 4]; // step 0 reveals node 1 (z1), etc.
+
+    // Gradient values on edges (backward), from right to left
+    // Steps 4-8 in bpSteps correspond to backward
+    // gradEdges[i] = { from node index, to node index, value, revealAtStep }
+    const gradEdges = [
+        { from: 4, to: 3, val: dL_dyhat.toFixed(4), step: 4 },
+        { from: 3, to: 2, val: dL_da1.toFixed(4),   step: 6 },
+        { from: 2, to: 1, val: dL_dz1.toFixed(4),   step: 7 },
+        { from: 1, to: 0, val: dL_dw1.toFixed(4),   step: 8 },
+    ];
+    const paramGrads = [
+        { opIdx: 2, vals: ['∂L/∂w₂=' + dL_dw2.toFixed(3), '∂L/∂b₂=' + dL_db2.toFixed(3)], step: 5 },
+        { opIdx: 0, vals: ['∂L/∂w₁=' + dL_dw1.toFixed(3), '∂L/∂b₁=' + dL_db1.toFixed(3)], step: 8 },
+    ];
+
+    // ── Determine which nodes/ops are "active" ──
+    // Forward steps 0-3: active op is step index, reveals corresponding value
+    // Backward steps 4-8: active op is (8 - step) roughly
+    let activeOp = -1;
+    if (step >= 0 && step <= 3) activeOp = step;
+    else if (step === 4) activeOp = 3;
+    else if (step === 5 || step === 6) activeOp = 2;
+    else if (step === 7) activeOp = 1;
+    else if (step === 8) activeOp = 0;
+
+    const isBackward = step >= 4;
+
+    // ── Draw connecting arrows ──
+    for (let i = 0; i < ops.length; i++) {
+        const x1 = nodes[i].x + nodeR + 2;
+        const x2 = ops[i].x - opW / 2;
+        const x3 = ops[i].x + opW / 2;
+        const x4 = nodes[i + 1].x - nodeR - 2;
+
+        ctx.strokeStyle = '#d0ccc6';
+        ctx.lineWidth = 1.5;
+        // Arrow from node to op
+        drawArrow(ctx, x1, midY, x2, midY);
+        // Arrow from op to next node
+        drawArrow(ctx, x3, midY, x4, midY);
+    }
+
+    // ── Draw operation boxes ──
+    for (let i = 0; i < ops.length; i++) {
+        const ox = ops[i].x, oy = midY;
+        const isActive = (i === activeOp);
+
+        // Box
+        ctx.fillStyle = isActive ? (isBackward ? '#fdeaea' : '#e8f0f8') : '#f5f3ef';
+        ctx.strokeStyle = isActive ? (isBackward ? '#c0392b' : '#3d6b9e') : '#d0ccc6';
+        ctx.lineWidth = isActive ? 2 : 1;
+        roundRect(ctx, ox - opW / 2, oy - opH / 2, opW, opH, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        // Label
+        ctx.fillStyle = isActive ? (isBackward ? '#c0392b' : '#2d5080') : '#6b6560';
+        ctx.font = '11px "JetBrains Mono"';
+        ctx.fillText(ops[i].label, ox, oy);
+    }
+
+    // ── Draw value nodes ──
+    for (let i = 0; i < nodes.length; i++) {
+        const nx = nodes[i].x, ny = midY;
+        // Is this node revealed?
+        let revealed = (i === 0); // x is always shown
+        for (let s = 0; s < fwdReveal.length; s++) {
+            if (fwdReveal[s] === i && step >= s) revealed = true;
+        }
+
+        const isNodeActive = (step <= 3 && i === step + 1) ||
+                             (step === 4 && i === 4) ||
+                             (step === 5 && i === 3) || (step === 6 && i === 2) ||
+                             (step === 7 && i === 1) || (step === 8 && i === 0);
+
+        // Circle
+        ctx.beginPath();
+        ctx.arc(nx, ny, nodeR, 0, Math.PI * 2);
+        ctx.fillStyle = revealed ? (isNodeActive && isBackward ? '#fdeaea' : '#e8f0f8') : '#f5f3ef';
+        ctx.fill();
+        ctx.strokeStyle = isNodeActive ? (isBackward ? '#c0392b' : '#3d6b9e') : (revealed ? '#3d6b9e' : '#d0ccc6');
+        ctx.lineWidth = isNodeActive ? 2.5 : 1.5;
+        ctx.stroke();
+
+        // Node label
+        ctx.fillStyle = revealed ? '#2c2825' : '#9a948e';
+        ctx.font = revealed ? '600 13px "Inter"' : '13px "Inter"';
+        ctx.fillText(nodes[i].label, nx, ny);
+
+        // Value above node
+        if (revealed) {
+            ctx.fillStyle = '#3d6b9e';
+            ctx.font = '500 11px "JetBrains Mono"';
+            ctx.fillText(fwdValues[i], nx, ny - nodeR - 10);
+        }
+    }
+
+    // ── Draw parameter labels below ops ──
+    for (const p of params) {
+        const ox = ops[p.opIdx].x;
+        ctx.fillStyle = '#6b6560';
+        ctx.font = '10px "JetBrains Mono"';
+        ctx.fillText(p.label, ox, paramY - 6);
+        ctx.fillText(p.label2, ox, paramY + 8);
+    }
+
+    // ── Draw backward gradient arrows ──
+    if (isBackward) {
+        for (const ge of gradEdges) {
+            if (step >= ge.step) {
+                const x1 = nodes[ge.from].x - nodeR - 4;
+                const x2 = nodes[ge.to].x + nodeR + 4;
+                const gy = gradY;
+                const isCurrent = (step === ge.step);
+
+                ctx.strokeStyle = isCurrent ? '#c0392b' : 'rgba(192, 57, 43, 0.45)';
+                ctx.lineWidth = isCurrent ? 2.5 : 1.5;
+                ctx.setLineDash(isCurrent ? [] : [4, 3]);
+                drawArrow(ctx, x1, gy, x2, gy);
+                ctx.setLineDash([]);
+
+                // Gradient value
+                const mx = (x1 + x2) / 2;
+                ctx.fillStyle = isCurrent ? '#c0392b' : 'rgba(192, 57, 43, 0.6)';
+                ctx.font = (isCurrent ? '600 ' : '') + '10px "JetBrains Mono"';
+                ctx.fillText(ge.val, mx, gy - 9);
+            }
+        }
+
+        // Parameter gradients
+        for (const pg of paramGrads) {
+            if (step >= pg.step) {
+                const ox = ops[pg.opIdx].x;
+                const isCurrent = (step === pg.step);
+                ctx.fillStyle = isCurrent ? '#c0392b' : 'rgba(192, 57, 43, 0.6)';
+                ctx.font = (isCurrent ? '600 ' : '') + '9px "JetBrains Mono"';
+                ctx.fillText(pg.vals[0], ox, paramY + 24);
+                ctx.fillText(pg.vals[1], ox, paramY + 36);
+            }
+        }
+    }
+
+    // ── Legend ──
+    ctx.font = '10px "Inter"';
+    ctx.textAlign = 'left';
+    const ly = H - 10;
+    // Forward dot
+    ctx.fillStyle = '#3d6b9e';
+    ctx.beginPath(); ctx.arc(pad, ly, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillText('Forward values', pad + 10, ly + 1);
+    // Backward dot
+    if (isBackward) {
+        ctx.fillStyle = '#c0392b';
+        ctx.beginPath(); ctx.arc(pad + 130, ly, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillText('Backward gradients', pad + 140, ly + 1);
+    }
+}
+
+// ══════════════════════════════════════════════════════
+// PART 4 DIAGRAM — Computational graph (DAG)
+// ══════════════════════════════════════════════════════
+
+function drawAgDiagram(step) {
+    const canvas = document.getElementById('ag-diagram');
+    const parent = canvas.parentElement;
+    canvas.width = parent.clientWidth;
+    canvas.height = 190;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const padL = 30, padR = 20;
+    const chainY = 70;
+    const leafY = 148;
+    const nW = 56, nH = 26, nR = 5;
+
+    // 8 operation nodes in a chain
+    const opLabels = ['mul', 'add', 'σ', 'mul', 'add', 'sub', 'sq', 'mul'];
+    const opOutputs = ['t₁', 'z₁', 'a₁', 't₂', 'y\u0302', 'd', 'd²', 'L'];
+    const opFwdVals = ['0.75', '0.85', '0.700', '−0.210', '0.190', '−0.610', '0.372', '0.186'];
+
+    // Backward gradient arriving at each op's output (from the right)
+    const opGradVals = ['0.038', '0.038', '0.183', '−0.610', '−0.610', '−0.610', '0.5', '1'];
+
+    // Leaf inputs feeding into each op from below
+    // [opIndex, label, value]
+    const leaves = [
+        { op: 0, label: 'w₁', val: '0.5',  grad: '0.058' },
+        { op: 0, label: 'x',  val: '1.5',  grad: null },
+        { op: 1, label: 'b₁', val: '0.1',  grad: '0.038' },
+        { op: 3, label: 'w₂', val: '−0.3', grad: '−0.427' },
+        { op: 4, label: 'b₂', val: '0.4',  grad: '−0.610' },
+        { op: 5, label: 'y',  val: '0.8',  grad: null },
+        { op: 7, label: '0.5', val: '',     grad: null },
+    ];
+
+    // Position ops
+    const totalW = W - padL - padR;
+    const spacing = totalW / (opLabels.length - 1);
+    const opX = opLabels.map((_, i) => padL + i * spacing);
+
+    // Position leaves — spread under their op with small offsets
+    const leafGroups = {};
+    leaves.forEach(l => {
+        if (!leafGroups[l.op]) leafGroups[l.op] = [];
+        leafGroups[l.op].push(l);
+    });
+    for (const [opIdx, group] of Object.entries(leafGroups)) {
+        const cx = opX[+opIdx];
+        const offsetStep = 38;
+        const startX = cx - (group.length - 1) * offsetStep / 2;
+        group.forEach((l, i) => { l.x = startX + i * offsetStep; });
+    }
+
+    // ── Determine state ──
+    // Steps 0-1: forward (0 = graph structure, 1 = forward values)
+    // Steps 2-11: backward (node 8 down to node 1, then summary)
+    // Backward step maps: step 2 → op 7, step 3 → op 6, ..., step 9 → op 0
+    const isForward = step <= 1;
+    const showValues = step >= 1;
+    let activeOpIdx = -1;
+    if (step >= 2 && step <= 9) activeOpIdx = 9 - step; // step2→op7, step3→op6, ..., step9→op0
+
+    // Which ops have completed backward pass
+    const backwardDone = new Set();
+    if (step >= 2) {
+        for (let s = 2; s <= Math.min(step, 9); s++) backwardDone.add(9 - s);
+    }
+
+    // ── Draw chain arrows ──
+    for (let i = 0; i < opLabels.length - 1; i++) {
+        const x1 = opX[i] + nW / 2 + 2;
+        const x2 = opX[i + 1] - nW / 2 - 2;
+        ctx.strokeStyle = '#d0ccc6';
+        ctx.lineWidth = 1.5;
+        drawArrow(ctx, x1, chainY, x2, chainY);
+    }
+
+    // ── Draw leaf arrows ──
+    for (const l of leaves) {
+        const ox = opX[l.op];
+        ctx.strokeStyle = '#d0ccc6';
+        ctx.lineWidth = 1;
+        drawArrow(ctx, l.x, leafY - 10, ox, chainY + nH / 2 + 2);
+    }
+
+    // ── Draw operation nodes ──
+    for (let i = 0; i < opLabels.length; i++) {
+        const ox = opX[i], oy = chainY;
+        const isActive = (i === activeOpIdx);
+        const isDone = backwardDone.has(i);
+
+        ctx.fillStyle = isActive ? '#fdeaea' : (isDone && step > 1 ? '#f5eef5' : '#f5f3ef');
+        ctx.strokeStyle = isActive ? '#c0392b' : (isDone && step > 1 ? '#7b5ea7' : '#d0ccc6');
+        ctx.lineWidth = isActive ? 2.5 : 1.5;
+        roundRect(ctx, ox - nW / 2, oy - nH / 2, nW, nH, nR);
+        ctx.fill();
+        ctx.stroke();
+
+        // Op label
+        ctx.fillStyle = isActive ? '#c0392b' : '#2c2825';
+        ctx.font = '600 10px "JetBrains Mono"';
+        ctx.fillText(opLabels[i], ox, oy - 1);
+
+        // Output name above
+        if (showValues) {
+            ctx.fillStyle = '#3d6b9e';
+            ctx.font = '10px "JetBrains Mono"';
+            ctx.fillText(opOutputs[i] + '=' + opFwdVals[i], ox, oy - nH / 2 - 11);
+        } else {
+            ctx.fillStyle = '#6b6560';
+            ctx.font = '10px "JetBrains Mono"';
+            ctx.fillText(opOutputs[i], ox, oy - nH / 2 - 11);
+        }
+
+        // Gradient below op (during backward)
+        if (isDone && step > 1) {
+            ctx.fillStyle = isActive ? '#c0392b' : 'rgba(123, 94, 167, 0.7)';
+            ctx.font = (isActive ? '600 ' : '') + '9px "JetBrains Mono"';
+            ctx.fillText('grad=' + opGradVals[i], ox, oy + nH / 2 + 11);
+        }
+    }
+
+    // ── Draw leaf nodes ──
+    for (const l of leaves) {
+        const lx = l.x, ly = leafY;
+        const parentDone = backwardDone.has(l.op);
+        const showLeafGrad = parentDone && l.grad && step > 1;
+
+        // Small circle
+        ctx.beginPath();
+        ctx.arc(lx, ly, 14, 0, Math.PI * 2);
+        ctx.fillStyle = showLeafGrad ? '#f0ebf5' : '#f5f3ef';
+        ctx.fill();
+        ctx.strokeStyle = showLeafGrad ? '#7b5ea7' : '#d0ccc6';
+        ctx.lineWidth = showLeafGrad ? 2 : 1;
+        ctx.stroke();
+
+        // Label
+        ctx.fillStyle = '#2c2825';
+        ctx.font = '500 10px "JetBrains Mono"';
+        ctx.fillText(l.label, lx, ly);
+
+        // Gradient
+        if (showLeafGrad) {
+            ctx.fillStyle = '#7b5ea7';
+            ctx.font = '600 8px "JetBrains Mono"';
+            ctx.fillText(l.grad, lx, ly + 22);
+        }
+    }
+
+    // ── Backward flow arrow ──
+    if (step >= 2 && step <= 9) {
+        const ax1 = opX[Math.min(activeOpIdx + 1, 7)] + nW / 2 + 8;
+        const ax2 = opX[activeOpIdx] + nW / 2 + 4;
+        if (activeOpIdx < 7) {
+            ctx.strokeStyle = 'rgba(192, 57, 43, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 4]);
+            const arrowY = chainY + nH / 2 + 24;
+            drawArrow(ctx, ax1, arrowY, ax2, arrowY);
+            ctx.setLineDash([]);
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════
+// Shared drawing helpers
+// ══════════════════════════════════════════════════════
+
+function drawArrow(ctx, x1, y1, x2, y2) {
+    const headLen = 6;
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - headLen * Math.cos(angle - 0.4), y2 - headLen * Math.sin(angle - 0.4));
+    ctx.lineTo(x2 - headLen * Math.cos(angle + 0.4), y2 - headLen * Math.sin(angle + 0.4));
+    ctx.closePath();
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.fill();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
+// ══════════════════════════════════════════════════════
+// Step-through controller factory (with diagram callback)
+// ══════════════════════════════════════════════════════
+
+function createStepper(containerId, steps, prevId, nextId, resetId, labelId, bodyId, drawFn) {
+    let current = 0;
+    const body = document.getElementById(bodyId);
+    const prevBtn = document.getElementById(prevId);
+    const nextBtn = document.getElementById(nextId);
+    const resetBtn = document.getElementById(resetId);
+    const label = document.getElementById(labelId);
+
+    function render() {
+        body.innerHTML = steps[current].html;
+        label.textContent = `Step ${current + 1} / ${steps.length}`;
+        prevBtn.disabled = current === 0;
+        nextBtn.disabled = current === steps.length - 1;
+        renderMathInElement(body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });
+        if (drawFn) drawFn(current);
+    }
+
+    prevBtn.addEventListener('click', () => { if (current > 0) { current--; render(); } });
+    nextBtn.addEventListener('click', () => { if (current < steps.length - 1) { current++; render(); } });
+    resetBtn.addEventListener('click', () => { current = 0; render(); });
+
+    render();
+}
+
+// ── Initialize everything on load ──
+document.addEventListener('DOMContentLoaded', () => {
+    renderMathInElement(document.body, {
+        delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false
+    });
+
+    updatePartialDemo();
+    updateChainRule();
+
+    createStepper('backprop-stepper', bpSteps, 'bp-prev', 'bp-next', 'bp-reset', 'bp-step-label', 'bp-step-body', drawBpDiagram);
+    createStepper('autograd-stepper', agSteps, 'ag-prev', 'ag-next', 'ag-reset', 'ag-step-label', 'ag-step-body', drawAgDiagram);
+
+    // Redraw on resize
+    window.addEventListener('resize', () => {
+        drawBpDiagram(0);
+        drawAgDiagram(0);
+    });
+});
+</script>
+
+</body>
+</html>

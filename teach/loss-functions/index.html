@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cross-Entropy & Softmax Explorer</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    --bg: #fafaf8;
+    --surface: #ffffff;
+    --surface-alt: #f5f3ef;
+    --border: #e2ddd5;
+    --text: #2c2825;
+    --text-secondary: #6b6560;
+    --text-tertiary: #9a948e;
+    --accent: #3d6b9e;
+    --accent-light: #e8f0f8;
+    --success: #27864a;
+    --success-light: #e8f5ec;
+    --danger: #c0392b;
+    --danger-light: #fdeaea;
+    --warning: #b87a1a;
+    --warning-light: #fef6e8;
+    --purple: #7b5ea7;
+    --purple-light: #f0ebf5;
+    --teal: #1a7a7a;
+    --teal-light: #e6f4f4;
+
+    --cat: #2196F3;
+    --dog: #E91E63;
+    --fish: #4CAF50;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    grid-template-rows: auto 1fr;
+    height: 100vh;
+    overflow: hidden;
+}
+
+header {
+    grid-column: 1 / -1;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+}
+header h1 { font-family: 'Source Serif 4', serif; font-size: 1.4rem; margin-bottom: 0.15rem; }
+header .subtitle { color: var(--text-secondary); font-size: 0.85rem; }
+
+/* Sidebar */
+.sidebar {
+    padding: 1.25rem;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    overflow-y: auto;
+}
+
+.control-group { margin-bottom: 1.5rem; }
+.control-group-title {
+    font-family: 'Source Serif 4', serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.75rem;
+}
+
+.logit-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+}
+.logit-row .class-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.logit-row label {
+    min-width: 40px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.logit-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+}
+.logit-row .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    min-width: 42px;
+    text-align: right;
+    font-weight: 500;
+}
+
+.target-row {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+}
+.target-btn {
+    flex: 1;
+    padding: 0.5rem 0.3rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.12s;
+}
+.target-btn:hover { background: var(--surface-alt); }
+.target-btn.selected { border-color: var(--success); background: var(--success-light); }
+
+.control-row { margin-bottom: 0.5rem; }
+.control-row label { display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.15rem; }
+.slider-line { display: flex; align-items: center; gap: 0.5rem; }
+.slider-line input[type="range"] { flex: 1; accent-color: var(--accent); }
+.slider-line .val { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; min-width: 30px; text-align: right; }
+
+.preset-btn {
+    display: block;
+    width: 100%;
+    padding: 0.4rem 0.65rem;
+    margin-bottom: 0.3rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.78rem;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--surface-alt);
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.12s;
+}
+.preset-btn:hover { background: var(--accent-light); border-color: var(--accent); }
+.preset-btn strong { font-weight: 600; }
+
+.hint {
+    background: var(--accent-light);
+    border-left: 3px solid var(--accent);
+    padding: 0.6rem 0.75rem;
+    margin: 0.75rem 0;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+.hint::before { content: "What to notice: "; font-weight: 600; color: var(--accent); }
+
+/* Main */
+.main {
+    padding: 1rem 1.5rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.85rem;
+    background: var(--surface-alt);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+}
+.panel-title { font-family: 'Source Serif 4', serif; font-weight: 600; }
+.panel-subtitle { color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; }
+
+.panel canvas { display: block; width: 100%; max-width: 700px; margin: 0 auto; }
+
+/* Softmax bar + probability display */
+.softmax-strip {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    border-top: 1px solid var(--border);
+}
+
+.sm-cell {
+    padding: 0.6rem 0.75rem;
+    text-align: center;
+    border-right: 1px solid var(--border);
+}
+.sm-cell:last-child { border-right: none; }
+.sm-cell .sm-label { font-size: 0.7rem; color: var(--text-tertiary); margin-bottom: 0.2rem; }
+.sm-cell .sm-prob {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+.sm-cell .sm-bar-bg {
+    height: 8px;
+    background: var(--surface-alt);
+    border-radius: 4px;
+    margin-top: 0.35rem;
+    overflow: hidden;
+}
+.sm-cell .sm-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.15s ease;
+}
+
+/* Loss display */
+.loss-strip {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    border-top: 1px solid var(--border);
+    background: var(--surface-alt);
+}
+.loss-cell {
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+    border-right: 1px solid var(--border);
+}
+.loss-cell:last-child { border-right: none; }
+.loss-cell .lc-label { font-size: 0.7rem; color: var(--text-tertiary); }
+.loss-cell .lc-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+/* Gradient strip */
+.grad-strip {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    border-top: 1px solid var(--border);
+}
+.grad-cell {
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+    border-right: 1px solid var(--border);
+}
+.grad-cell:last-child { border-right: none; }
+.grad-cell .gc-label { font-size: 0.7rem; color: var(--text-tertiary); }
+.grad-cell .gc-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+.grad-cell .gc-arrow {
+    font-size: 0.75rem;
+    margin-top: 0.1rem;
+}
+</style>
+</head>
+<body>
+
+<header>
+    <h1>Cross-Entropy & Softmax Explorer</h1>
+    <div class="subtitle">Adjust logits, see probabilities and loss respond. Understand why confident-and-wrong is catastrophic.</div>
+</header>
+
+<div class="sidebar">
+    <div class="control-group">
+        <div class="control-group-title">True class</div>
+        <div class="target-row">
+            <button class="target-btn selected" data-class="0"><span style="color:var(--cat);">Cat</span></button>
+            <button class="target-btn" data-class="1"><span style="color:var(--dog);">Dog</span></button>
+            <button class="target-btn" data-class="2"><span style="color:var(--fish);">Fish</span></button>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-tertiary);">One-hot target: $y = $ [<span id="onehot-display">1, 0, 0</span>]</div>
+    </div>
+
+    <div class="control-group">
+        <div class="control-group-title">Logits (raw network output)</div>
+        <div class="logit-row">
+            <div class="class-dot" style="background: var(--cat);"></div>
+            <label>Cat</label>
+            <input type="range" id="logit-0" min="-5" max="5" step="0.1" value="2.0">
+            <span class="val" id="logit-0-val">2.0</span>
+        </div>
+        <div class="logit-row">
+            <div class="class-dot" style="background: var(--dog);"></div>
+            <label>Dog</label>
+            <input type="range" id="logit-1" min="-5" max="5" step="0.1" value="1.0">
+            <span class="val" id="logit-1-val">1.0</span>
+        </div>
+        <div class="logit-row">
+            <div class="class-dot" style="background: var(--fish);"></div>
+            <label>Fish</label>
+            <input type="range" id="logit-2" min="-5" max="5" step="0.1" value="-1.0">
+            <span class="val" id="logit-2-val">-1.0</span>
+        </div>
+    </div>
+
+    <div class="control-group">
+        <div class="control-group-title">Temperature</div>
+        <div class="control-row">
+            <label>Softmax temperature $T$ (divide logits by $T$)</label>
+            <div class="slider-line">
+                <input type="range" id="temperature" min="0.1" max="5" step="0.1" value="1.0">
+                <span class="val" id="temp-val">1.0</span>
+            </div>
+        </div>
+        <div style="font-size: 0.73rem; color: var(--text-tertiary); margin-top: 0.2rem;">$T &lt; 1$: sharper (more confident). $T &gt; 1$: softer (more uniform). $T = 1$: standard.</div>
+    </div>
+
+    <div class="control-group">
+        <div class="control-group-title">Presets</div>
+        <button class="preset-btn" data-preset="confident-correct"><strong>Confident & correct</strong> — low loss</button>
+        <button class="preset-btn" data-preset="confident-wrong"><strong>Confident & wrong</strong> — catastrophic loss</button>
+        <button class="preset-btn" data-preset="uncertain"><strong>Uncertain</strong> — uniform distribution</button>
+        <button class="preset-btn" data-preset="almost-right"><strong>Almost right</strong> — close call</button>
+        <button class="preset-btn" data-preset="adversarial"><strong>Extreme wrong</strong> — logit = -5 for true class</button>
+    </div>
+
+    <div class="hint" id="dynamic-hint">Move the Cat logit slider up and down. Watch how the loss curve responds — it rises gently when you're slightly wrong, but explodes when the predicted probability drops near zero.</div>
+</div>
+
+<div class="main">
+    <!-- Softmax probabilities panel -->
+    <div class="panel">
+        <div class="panel-header">
+            <span class="panel-title">Softmax probabilities</span>
+            <span class="panel-subtitle">$\hat{y}_c = \exp(z_c/T) \;/\; \sum \exp(z_j/T)$</span>
+        </div>
+        <div class="softmax-strip">
+            <div class="sm-cell">
+                <div class="sm-label">Cat</div>
+                <div class="sm-prob" id="prob-0" style="color: var(--cat);">—</div>
+                <div class="sm-bar-bg"><div class="sm-bar" id="bar-0" style="background: var(--cat); width: 0%;"></div></div>
+            </div>
+            <div class="sm-cell">
+                <div class="sm-label">Dog</div>
+                <div class="sm-prob" id="prob-1" style="color: var(--dog);">—</div>
+                <div class="sm-bar-bg"><div class="sm-bar" id="bar-1" style="background: var(--dog); width: 0%;"></div></div>
+            </div>
+            <div class="sm-cell">
+                <div class="sm-label">Fish</div>
+                <div class="sm-prob" id="prob-2" style="color: var(--fish);">—</div>
+                <div class="sm-bar-bg"><div class="sm-bar" id="bar-2" style="background: var(--fish); width: 0%;"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loss curve panel -->
+    <div class="panel">
+        <div class="panel-header">
+            <span class="panel-title">Cross-entropy loss: $\mathcal{L} = -\log(\hat{y}_k)$</span>
+            <span class="panel-subtitle" id="loss-subtitle">where $k$ = true class</span>
+        </div>
+        <canvas id="loss-canvas" height="280"></canvas>
+        <div class="loss-strip">
+            <div class="loss-cell">
+                <div class="lc-label">$\hat{y}_k$ (prob of true class)</div>
+                <div class="lc-value" id="loss-prob">—</div>
+            </div>
+            <div class="loss-cell">
+                <div class="lc-label">$-\log(\hat{y}_k)$ = loss</div>
+                <div class="lc-value" id="loss-value">—</div>
+            </div>
+            <div class="loss-cell">
+                <div class="lc-label">verdict</div>
+                <div class="lc-value" id="loss-verdict">—</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gradient panel -->
+    <div class="panel">
+        <div class="panel-header">
+            <span class="panel-title">Gradients: $\partial\mathcal{L}/\partial z_c = \hat{y}_c - y_c$</span>
+            <span class="panel-subtitle">which direction should each logit move?</span>
+        </div>
+        <canvas id="grad-canvas" height="140"></canvas>
+        <div class="grad-strip">
+            <div class="grad-cell">
+                <div class="gc-label">$\partial\mathcal{L}/\partial z_{\text{cat}}$</div>
+                <div class="gc-value" id="grad-0">—</div>
+                <div class="gc-arrow" id="grad-arrow-0">—</div>
+            </div>
+            <div class="grad-cell">
+                <div class="gc-label">$\partial\mathcal{L}/\partial z_{\text{dog}}$</div>
+                <div class="gc-value" id="grad-1">—</div>
+                <div class="gc-arrow" id="grad-arrow-1">—</div>
+            </div>
+            <div class="grad-cell">
+                <div class="gc-label">$\partial\mathcal{L}/\partial z_{\text{fish}}$</div>
+                <div class="gc-value" id="grad-2">—</div>
+                <div class="gc-arrow" id="grad-arrow-2">—</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+// State
+// ══════════════════════════════════════════════════
+
+let trueClass = 0;
+let logits = [2.0, 1.0, -1.0];
+let temperature = 1.0;
+
+const classNames = ['Cat', 'Dog', 'Fish'];
+const classColors = ['#2196F3', '#E91E63', '#4CAF50'];
+
+// ══════════════════════════════════════════════════
+// Math
+// ══════════════════════════════════════════════════
+
+function softmax(logits, T) {
+    const scaled = logits.map(z => z / T);
+    const maxZ = Math.max(...scaled);
+    const exps = scaled.map(z => Math.exp(z - maxZ));
+    const sum = exps.reduce((a, b) => a + b, 0);
+    return exps.map(e => e / sum);
+}
+
+function crossEntropy(probs, trueClass) {
+    return -Math.log(Math.max(probs[trueClass], 1e-15));
+}
+
+function gradients(probs, trueClass) {
+    return probs.map((p, i) => i === trueClass ? p - 1 : p);
+}
+
+// ══════════════════════════════════════════════════
+// Drawing: Loss curve
+// ══════════════════════════════════════════════════
+
+function drawLossCurve() {
+    const canvas = document.getElementById('loss-canvas');
+    const parent = canvas.parentElement;
+    canvas.width = Math.min(parent.clientWidth, 700);
+    const W = canvas.width, H = canvas.height;
+    const ctx = canvas.getContext('2d');
+
+    ctx.clearRect(0, 0, W, H);
+
+    const pad = { top: 20, bottom: 25, left: 55, right: 20 };
+    const plotW = W - pad.left - pad.right;
+    const plotH = H - pad.top - pad.bottom;
+
+    // x: probability [0, 1], y: loss [0, 5]
+    const xMin = 0, xMax = 1, yMin = 0, yMax = 5;
+
+    function toX(p) { return pad.left + (p - xMin) / (xMax - xMin) * plotW; }
+    function toY(l) { return pad.top + (1 - (l - yMin) / (yMax - yMin)) * plotH; }
+
+    // Grid
+    ctx.strokeStyle = '#eae6e0';
+    ctx.lineWidth = 1;
+    for (let p = 0; p <= 1; p += 0.2) {
+        const x = toX(p);
+        ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, H - pad.bottom); ctx.stroke();
+    }
+    for (let l = 0; l <= yMax; l += 1) {
+        const y = toY(l);
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = '#b0aaa2';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(pad.left, H - pad.bottom); ctx.lineTo(W - pad.right, H - pad.bottom); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pad.left, pad.top); ctx.lineTo(pad.left, H - pad.bottom); ctx.stroke();
+
+    // Labels
+    ctx.fillStyle = '#9a948e';
+    ctx.font = '10px "JetBrains Mono"';
+    ctx.textAlign = 'center';
+    for (let p = 0; p <= 1; p += 0.2) {
+        ctx.fillText(p.toFixed(1), toX(p), H - pad.bottom + 15);
+    }
+    ctx.textAlign = 'right';
+    for (let l = 0; l <= yMax; l += 1) {
+        ctx.fillText(l.toFixed(0), pad.left - 8, toY(l) + 4);
+    }
+    // Axis titles
+    ctx.fillStyle = '#6b6560';
+    ctx.font = '11px "Inter"';
+    ctx.textAlign = 'center';
+    ctx.fillText('predicted probability of true class (ŷₖ)', pad.left + plotW / 2, H - 2);
+    ctx.save();
+    ctx.translate(14, pad.top + plotH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('loss = -log(ŷₖ)', 0, 0);
+    ctx.restore();
+
+    // -log(p) curve
+    ctx.strokeStyle = '#7b5ea7';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    const steps = 300;
+    for (let i = 1; i <= steps; i++) {
+        const p = i / steps;
+        const l = -Math.log(p);
+        const x = toX(p), y = toY(Math.min(l, yMax + 0.5));
+        if (i === 1) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Shade the "danger zone" p < 0.1
+    ctx.fillStyle = 'rgba(192, 57, 43, 0.06)';
+    ctx.beginPath();
+    ctx.moveTo(toX(0), toY(yMax));
+    for (let i = 1; i <= 30; i++) {
+        const p = i / steps;
+        const l = Math.min(-Math.log(p), yMax);
+        ctx.lineTo(toX(p), toY(l));
+    }
+    ctx.lineTo(toX(30 / steps), toY(0));
+    ctx.lineTo(toX(0), toY(0));
+    ctx.closePath();
+    ctx.fill();
+
+    // "Safe zone" label
+    ctx.fillStyle = 'rgba(39, 134, 74, 0.5)';
+    ctx.font = '10px "Inter"';
+    ctx.textAlign = 'center';
+    ctx.fillText('low loss', toX(0.85), toY(0.3));
+
+    // "Danger zone" label
+    ctx.fillStyle = 'rgba(192, 57, 43, 0.5)';
+    ctx.fillText('catastrophic', toX(0.05), toY(3.5));
+
+    // Current point
+    const probs = softmax(logits, temperature);
+    const pk = probs[trueClass];
+    const loss = crossEntropy(probs, trueClass);
+    const px = toX(pk);
+    const py = toY(Math.min(loss, yMax));
+
+    // Dotted lines to axes
+    ctx.strokeStyle = 'rgba(44, 40, 37, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, H - pad.bottom); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(pad.left, py); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Point
+    const trueColor = classColors[trueClass];
+    ctx.beginPath();
+    ctx.arc(px, py, 7, 0, Math.PI * 2);
+    ctx.fillStyle = trueColor;
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Value label near point
+    ctx.fillStyle = '#2c2825';
+    ctx.font = '600 11px "JetBrains Mono"';
+    ctx.textAlign = 'left';
+    const labelX = px + 12;
+    const labelY = Math.max(py - 8, pad.top + 15);
+    if (loss < yMax) {
+        ctx.fillText(loss.toFixed(3), labelX, labelY);
+    } else {
+        ctx.fillText('>' + yMax.toFixed(0) + ' !', labelX, labelY);
+    }
+
+    // Update readouts
+    document.getElementById('loss-prob').textContent = pk.toFixed(4);
+    document.getElementById('loss-prob').style.color = trueColor;
+
+    const lossVal = document.getElementById('loss-value');
+    lossVal.textContent = loss < 100 ? loss.toFixed(4) : loss.toExponential(1);
+    lossVal.style.color = loss > 2 ? 'var(--danger)' : loss > 0.5 ? 'var(--warning)' : 'var(--success)';
+
+    const verdict = document.getElementById('loss-verdict');
+    if (pk > 0.9) { verdict.textContent = 'confident & correct'; verdict.style.color = 'var(--success)'; }
+    else if (pk > 0.5) { verdict.textContent = 'correct but unsure'; verdict.style.color = 'var(--teal)'; }
+    else if (pk > 0.2) { verdict.textContent = 'wrong answer wins'; verdict.style.color = 'var(--warning)'; }
+    else if (pk > 0.05) { verdict.textContent = 'badly wrong'; verdict.style.color = 'var(--danger)'; }
+    else { verdict.textContent = 'catastrophic'; verdict.style.color = 'var(--danger)'; }
+}
+
+// ══════════════════════════════════════════════════
+// Drawing: Gradients
+// ══════════════════════════════════════════════════
+
+function drawGradients() {
+    const canvas = document.getElementById('grad-canvas');
+    const parent = canvas.parentElement;
+    canvas.width = Math.min(parent.clientWidth, 700);
+    const W = canvas.width, H = canvas.height;
+    const ctx = canvas.getContext('2d');
+
+    ctx.clearRect(0, 0, W, H);
+
+    const probs = softmax(logits, temperature);
+    const grads = gradients(probs, trueClass);
+
+    const padX = 60;
+    const cellW = (W - 2 * padX) / 3;
+    const midY = H / 2;
+    const maxBarH = H / 2 - 20;
+
+    // Zero line
+    ctx.strokeStyle = '#d0ccc6';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padX, midY);
+    ctx.lineTo(W - padX, midY);
+    ctx.stroke();
+
+    ctx.fillStyle = '#9a948e';
+    ctx.font = '9px "JetBrains Mono"';
+    ctx.textAlign = 'right';
+    ctx.fillText('0', padX - 6, midY + 3);
+
+    for (let i = 0; i < 3; i++) {
+        const cx = padX + cellW * i + cellW / 2;
+        const g = grads[i];
+        const barH = Math.min(Math.abs(g), 1) * maxBarH;
+        const isNeg = g < 0;
+
+        // Bar
+        const barW = 40;
+        const x = cx - barW / 2;
+        let y, h;
+        if (isNeg) {
+            y = midY;
+            h = barH;
+        } else {
+            y = midY - barH;
+            h = barH;
+        }
+
+        ctx.fillStyle = classColors[i];
+        ctx.globalAlpha = 0.7;
+        roundRect(ctx, x, y, barW, h, 3);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Arrow direction
+        const arrowY = isNeg ? midY + barH + 10 : midY - barH - 10;
+        const arrowDir = isNeg ? 1 : -1;
+        ctx.strokeStyle = classColors[i];
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, midY + (isNeg ? barH + 2 : -barH - 2));
+        ctx.lineTo(cx, arrowY);
+        ctx.stroke();
+        // Arrow head
+        ctx.beginPath();
+        ctx.moveTo(cx, arrowY);
+        ctx.lineTo(cx - 4, arrowY - arrowDir * 5);
+        ctx.lineTo(cx + 4, arrowY - arrowDir * 5);
+        ctx.closePath();
+        ctx.fillStyle = classColors[i];
+        ctx.fill();
+
+        // Label
+        ctx.fillStyle = '#6b6560';
+        ctx.font = '500 11px "Inter"';
+        ctx.textAlign = 'center';
+        ctx.fillText(classNames[i], cx, 14);
+
+        // Gradient readout
+        const gradEl = document.getElementById('grad-' + i);
+        gradEl.textContent = (g >= 0 ? '+' : '') + g.toFixed(4);
+        gradEl.style.color = classColors[i];
+
+        const arrowEl = document.getElementById('grad-arrow-' + i);
+        if (i === trueClass) {
+            arrowEl.textContent = g < 0 ? 'push logit UP' : 'already maxed';
+            arrowEl.style.color = 'var(--success)';
+        } else {
+            arrowEl.textContent = g > 0.01 ? 'push logit DOWN' : 'already suppressed';
+            arrowEl.style.color = 'var(--text-tertiary)';
+        }
+    }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
+// ══════════════════════════════════════════════════
+// Update all
+// ══════════════════════════════════════════════════
+
+function update() {
+    const probs = softmax(logits, temperature);
+
+    // Softmax bars
+    for (let i = 0; i < 3; i++) {
+        document.getElementById('prob-' + i).textContent = (probs[i] * 100).toFixed(1) + '%';
+        document.getElementById('bar-' + i).style.width = (probs[i] * 100) + '%';
+    }
+
+    // One-hot display
+    const onehot = [0, 0, 0];
+    onehot[trueClass] = 1;
+    document.getElementById('onehot-display').textContent = onehot.join(', ');
+
+    drawLossCurve();
+    drawGradients();
+    updateHint();
+}
+
+// ══════════════════════════════════════════════════
+// Hints
+// ══════════════════════════════════════════════════
+
+function updateHint() {
+    const probs = softmax(logits, temperature);
+    const pk = probs[trueClass];
+    const loss = crossEntropy(probs, trueClass);
+    const el = document.getElementById('dynamic-hint');
+
+    if (loss > 5) {
+        el.textContent = 'The loss is enormous because the model assigns near-zero probability to the correct class. In training, this would produce a very large gradient — a strong "shove" to fix the mistake. This is why cross-entropy is effective: it punishes confident mistakes severely.';
+    } else if (loss > 2) {
+        el.textContent = 'The model is wrong — the true class has low probability. Notice the gradient bars: the true class has a large negative gradient (push its logit up), while the wrong classes have positive gradients (push their logits down).';
+    } else if (loss < 0.05) {
+        el.textContent = 'Near-perfect prediction. The loss is tiny and the gradients are tiny too — the model has almost nothing left to learn from this example. Try making it wrong to see the asymmetry: loss rises slowly from here but explodes as ŷₖ approaches 0.';
+    } else if (temperature !== 1.0) {
+        if (temperature < 1) {
+            el.textContent = 'Low temperature sharpens the distribution — the largest logit dominates more. This is used during inference for more decisive predictions, and in knowledge distillation to extract "dark knowledge" from soft probabilities.';
+        } else {
+            el.textContent = 'High temperature softens the distribution toward uniform. In knowledge distillation, a teacher model\'s soft predictions (high T) carry more information than hard labels — the relative probabilities of wrong classes reveal inter-class similarities.';
+        }
+    } else {
+        el.textContent = 'Move the logit sliders and watch how small changes in logits can produce large changes in loss — especially when the true class probability is low. The -log curve is what creates this asymmetry.';
+    }
+}
+
+// ══════════════════════════════════════════════════
+// Event listeners
+// ══════════════════════════════════════════════════
+
+for (let i = 0; i < 3; i++) {
+    document.getElementById('logit-' + i).addEventListener('input', (e) => {
+        logits[i] = parseFloat(e.target.value);
+        document.getElementById('logit-' + i + '-val').textContent = logits[i].toFixed(1);
+        update();
+    });
+}
+
+document.getElementById('temperature').addEventListener('input', (e) => {
+    temperature = parseFloat(e.target.value);
+    document.getElementById('temp-val').textContent = temperature.toFixed(1);
+    update();
+});
+
+document.querySelectorAll('.target-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        trueClass = parseInt(btn.dataset.class);
+        document.querySelectorAll('.target-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        update();
+    });
+});
+
+// Presets
+const presets = {
+    'confident-correct': { logits: [4.0, 0.5, -1.0], trueClass: 0, temp: 1.0 },
+    'confident-wrong': { logits: [-2.0, 4.0, 0.0], trueClass: 0, temp: 1.0 },
+    'uncertain': { logits: [0.1, 0.0, -0.1], trueClass: 0, temp: 1.0 },
+    'almost-right': { logits: [2.0, 1.8, -1.0], trueClass: 0, temp: 1.0 },
+    'adversarial': { logits: [-5.0, 3.0, 2.0], trueClass: 0, temp: 1.0 },
+};
+
+document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const p = presets[btn.dataset.preset];
+        logits = [...p.logits];
+        trueClass = p.trueClass;
+        temperature = p.temp;
+        for (let i = 0; i < 3; i++) {
+            document.getElementById('logit-' + i).value = logits[i];
+            document.getElementById('logit-' + i + '-val').textContent = logits[i].toFixed(1);
+        }
+        document.getElementById('temperature').value = temperature;
+        document.getElementById('temp-val').textContent = temperature.toFixed(1);
+        document.querySelectorAll('.target-btn').forEach(b => b.classList.remove('selected'));
+        document.querySelectorAll('.target-btn')[trueClass].classList.add('selected');
+        update();
+    });
+});
+
+// ══════════════════════════════════════════════════
+// Init
+// ══════════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderMathInElement(document.body, {
+        delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false
+    });
+    update();
+    window.addEventListener('resize', update);
+});
+</script>
+
+</body>
+</html>

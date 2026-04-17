@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tensors — Interactive Learning</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg: #fafaf8;
+    --surface: #ffffff;
+    --surface-alt: #f5f3ef;
+    --border: #e2ddd5;
+    --text: #2c2825;
+    --text-secondary: #6b6560;
+    --text-tertiary: #9a948e;
+    --accent: #3d6b9e;
+    --accent-light: #e8f0f8;
+    --primary: #3d6b9e;
+    --primary-stroke: #2d5080;
+    --success: #27864a;
+    --success-stroke: #176030;
+    --danger: #c0392b;
+    --danger-stroke: #a02920;
+    --warning: #b87a1a;
+    --warning-stroke: #986010;
+    --purple: #7b5ea7;
+    --purple-stroke: #5b3e87;
+    --teal: #1a7a7a;
+    --teal-stroke: #0a5a5a;
+    --neutral: #6b6560;
+    --neutral-stroke: #4b4540;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+}
+
+h1, h2, h3 { font-family: 'Source Serif 4', serif; font-weight: 600; }
+code, .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.9em; }
+
+.container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem 3rem;
+}
+
+header {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+}
+
+header h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+header p { color: var(--text-secondary); font-size: 1.05rem; }
+
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 2rem;
+    overflow-x: auto;
+}
+
+.tab {
+    padding: 0.75rem 1.25rem;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.tab:hover { color: var(--text); }
+.tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+/* Section layout */
+.section { display: none; }
+.section.active { display: block; }
+
+.section-content {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 2rem;
+    align-items: start;
+}
+
+/* Desktop-only — no responsive breakpoints needed */
+
+.explanation {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+}
+
+.explanation h2 { font-size: 1.3rem; margin-bottom: 0.75rem; }
+.explanation p { margin-bottom: 0.75rem; font-size: 0.95rem; }
+
+.controls {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.control-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.control-group select,
+.control-group input[type="text"],
+.control-group input[type="range"] {
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    background: var(--surface);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text);
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.btn:hover { background: var(--surface-alt); border-color: var(--text-tertiary); }
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--primary-stroke); }
+.btn.primary:hover { background: var(--primary-stroke); }
+
+.btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.state-display {
+    background: var(--surface-alt);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    line-height: 1.7;
+}
+
+.state-display .label {
+    color: var(--text-tertiary);
+    font-size: 0.8rem;
+}
+
+.hint {
+    background: var(--accent-light);
+    border-left: 3px solid var(--accent);
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    border-radius: 0 6px 6px 0;
+}
+
+.hint::before {
+    content: "What to notice: ";
+    font-weight: 600;
+    color: var(--accent);
+}
+
+/* Canvas area */
+.viz-area {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    min-height: 400px;
+    position: relative;
+}
+
+.viz-area canvas {
+    display: block;
+    width: 100%;
+    cursor: default;
+}
+
+/* Autograd graph */
+.graph-container {
+    position: relative;
+    overflow: auto;
+}
+
+/* Animation controls bar */
+.anim-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--border);
+    margin-top: 1rem;
+}
+
+.anim-controls .step-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    min-width: 120px;
+}
+
+.progress-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--surface-alt);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.3s;
+    border-radius: 3px;
+}
+
+/* Highlight colors for tensor elements */
+.legend {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(0,0,0,0.15);
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>Tensors</h1>
+        <p>Interactive explorations of memory layout, shape operations, broadcasting, and automatic differentiation</p>
+    </header>
+
+    <div class="tabs">
+        <button class="tab active" data-tab="memory">Memory Layout &amp; Strides</button>
+        <button class="tab" data-tab="reshape">Reshape / Transpose / Slice</button>
+        <button class="tab" data-tab="broadcast">Broadcasting</button>
+        <button class="tab" data-tab="autograd">Autograd</button>
+    </div>
+
+    <!-- ===== SECTION 1: Memory Layout & Strides ===== -->
+    <div class="section active" id="sec-memory">
+        <div class="section-content">
+            <div class="explanation">
+                <h2>Memory Layout &amp; Strides</h2>
+                <p>A tensor is stored as a flat array in memory. The <em>stride</em> for each dimension tells you how many elements to skip to move one step along that axis.</p>
+                <p>For a row-major tensor of shape $(D_1, D_2)$, the strides are $(D_2, 1)$ — moving along the last dimension steps through contiguous memory.</p>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Shape</label>
+                        <select id="mem-shape">
+                            <option value="3,4">3 × 4</option>
+                            <option value="4,3">4 × 3</option>
+                            <option value="2,6">2 × 6</option>
+                            <option value="6,2">6 × 2</option>
+                            <option value="2,3,2">2 × 3 × 2</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Memory Order</label>
+                        <select id="mem-order">
+                            <option value="row">Row-major (C / PyTorch)</option>
+                            <option value="col">Column-major (Fortran / MATLAB)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="state-display" id="mem-state">
+                    <div><span class="label">shape:</span> (3, 4)</div>
+                    <div><span class="label">strides:</span> (4, 1)</div>
+                    <div><span class="label">elements:</span> 12</div>
+                    <div><span class="label">order:</span> row-major</div>
+                </div>
+
+                <div class="hint">Row-major means the last dimension is contiguous in memory — adjacent elements in the last axis sit next to each other in RAM.</div>
+            </div>
+            <div class="viz-area">
+                <canvas id="mem-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SECTION 2: Reshape / Transpose / Slice ===== -->
+    <div class="section" id="sec-reshape">
+        <div class="section-content">
+            <div class="explanation">
+                <h2>Reshape / Transpose / Slice</h2>
+                <p><strong>Reshape</strong> changes the shape metadata without moving data — the flat memory stays the same, only the interpretation changes.</p>
+                <p><strong>Transpose</strong> swaps dimensions by swapping strides — the data doesn't move, but the access pattern changes.</p>
+                <p><strong>Slice</strong> selects a sub-region by adjusting the offset and shape.</p>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Source Shape</label>
+                        <select id="rs-source">
+                            <option value="3,4">3 × 4</option>
+                            <option value="2,6">2 × 6</option>
+                            <option value="4,3">4 × 3</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Operation</label>
+                        <select id="rs-op">
+                            <option value="reshape-6,2">Reshape → 6 × 2</option>
+                            <option value="reshape-2,6">Reshape → 2 × 6</option>
+                            <option value="reshape-12">Reshape → 12 (flatten)</option>
+                            <option value="reshape-2,2,3">Reshape → 2 × 2 × 3</option>
+                            <option value="transpose">Transpose</option>
+                            <option value="slice-rows-0:2">Slice rows [0:2]</option>
+                            <option value="slice-cols-1:3">Slice cols [1:3]</option>
+                        </select>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn primary" id="rs-apply">Apply</button>
+                        <button class="btn" id="rs-reset">Reset</button>
+                    </div>
+                </div>
+
+                <div class="state-display" id="rs-state">
+                    <div><span class="label">before:</span> shape (3,4), strides (4,1)</div>
+                    <div><span class="label">after:</span> —</div>
+                    <div><span class="label">data copied:</span> no</div>
+                </div>
+
+                <div class="hint">Reshape and slice don't copy data — they only change metadata. Transpose swaps strides, making the tensor non-contiguous.</div>
+            </div>
+            <div class="viz-area">
+                <canvas id="rs-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SECTION 3: Broadcasting ===== -->
+    <div class="section" id="sec-broadcast">
+        <div class="section-content">
+            <div class="explanation">
+                <h2>Broadcasting</h2>
+                <p>Broadcasting lets you perform operations on tensors of different shapes. Dimensions of size 1 are <em>virtually expanded</em> to match the other tensor — no data is actually copied.</p>
+                <p>Rules: align shapes from the right; dimensions must be equal or one of them must be 1.</p>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Example</label>
+                        <select id="bc-example">
+                            <option value="0">(3,1) + (1,4) → (3,4)</option>
+                            <option value="1">scalar + (3,3) → (3,3)</option>
+                            <option value="2">(3,4) + (4,) → (3,4)</option>
+                            <option value="3">(2,3,1) + (1,1,4) → (2,3,4)</option>
+                        </select>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn primary" id="bc-play">Play</button>
+                        <button class="btn" id="bc-step">Step</button>
+                        <button class="btn" id="bc-reset">Reset</button>
+                    </div>
+                </div>
+
+                <div class="anim-controls">
+                    <span class="step-label" id="bc-step-label">Step 0 / 3</span>
+                    <div class="progress-bar"><div class="fill" id="bc-progress" style="width:0%"></div></div>
+                </div>
+
+                <div class="state-display" id="bc-state">
+                    <div><span class="label">A shape:</span> (3, 1)</div>
+                    <div><span class="label">B shape:</span> (1, 4)</div>
+                    <div><span class="label">result:</span> (3, 4)</div>
+                </div>
+
+                <div class="hint">The expansion is virtual — no data is copied. Broadcasting is just a clever indexing trick: dimension-1 axes reuse the same single value for every position.</div>
+            </div>
+            <div class="viz-area">
+                <canvas id="bc-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SECTION 4: Autograd ===== -->
+    <div class="section" id="sec-autograd">
+        <div class="section-content">
+            <div class="explanation">
+                <h2>Autograd &amp; Computational Graph</h2>
+                <p>PyTorch builds a computational graph as operations execute. Each node records the operation and its inputs.</p>
+                <p>Forward pass: compute $L = (Wx + b - y)^2$. Backward pass: compute gradients via the chain rule, flowing right to left.</p>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <label>W (weight)</label>
+                        <input type="range" id="ag-w" min="-3" max="3" step="0.1" value="2.0">
+                        <span class="mono" id="ag-w-val">2.0</span>
+                    </div>
+                    <div class="control-group">
+                        <label>x (input)</label>
+                        <input type="range" id="ag-x" min="-3" max="3" step="0.1" value="1.5">
+                        <span class="mono" id="ag-x-val">1.5</span>
+                    </div>
+                    <div class="control-group">
+                        <label>b (bias)</label>
+                        <input type="range" id="ag-b" min="-3" max="3" step="0.1" value="0.5">
+                        <span class="mono" id="ag-b-val">0.5</span>
+                    </div>
+                    <div class="control-group">
+                        <label>y (target)</label>
+                        <input type="range" id="ag-y" min="-3" max="3" step="0.1" value="1.0">
+                        <span class="mono" id="ag-y-val">1.0</span>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn primary" id="ag-play">Play Forward + Backward</button>
+                        <button class="btn" id="ag-step">Step</button>
+                        <button class="btn" id="ag-reset">Reset</button>
+                    </div>
+                </div>
+
+                <div class="anim-controls">
+                    <span class="step-label" id="ag-step-label">Ready</span>
+                    <div class="progress-bar"><div class="fill" id="ag-progress" style="width:0%"></div></div>
+                </div>
+
+                <div class="state-display" id="ag-state">
+                    <div><span class="label">forward:</span> W·x → +b → -y → (·)² → L</div>
+                    <div><span class="label">gradients:</span> —</div>
+                </div>
+
+                <div class="hint">Every intermediate value remembers how it was computed. The backward pass applies the chain rule at each node: $\frac{\partial L}{\partial x} = \frac{\partial L}{\partial z} \cdot \frac{\partial z}{\partial x}$.</div>
+            </div>
+            <div class="viz-area">
+                <canvas id="ag-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    renderMathInElement(document.body, {
+        delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+        ]
+    });
+});
+
+// ===== TAB NAVIGATION =====
+const tabs = document.querySelectorAll('.tab');
+const sections = document.querySelectorAll('.section');
+tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        sections.forEach(s => s.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('sec-' + tab.dataset.tab).classList.add('active');
+        // Redraw current section
+        const id = tab.dataset.tab;
+        if (id === 'memory') drawMemory();
+        else if (id === 'reshape') drawReshape();
+        else if (id === 'broadcast') drawBroadcast();
+        else if (id === 'autograd') drawAutograd();
+    });
+});
+
+// ===== SHARED DRAWING UTILITIES =====
+const PALETTE = [
+    '#3d6b9e','#27864a','#c0392b','#b87a1a','#7b5ea7','#1a7a7a',
+    '#d35400','#2980b9','#8e44ad','#16a085','#c0392b','#f39c12'
+];
+
+function setupCanvas(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const w = rect.width - 48; // padding
+    const h = Math.max(380, rect.height - 48);
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+    return { ctx, w, h };
+}
+
+function drawCell(ctx, x, y, size, value, color, highlight, label) {
+    ctx.fillStyle = highlight ? color : '#f5f3ef';
+    ctx.strokeStyle = highlight ? color : '#e2ddd5';
+    ctx.lineWidth = highlight ? 2 : 1;
+    const r = 4;
+    ctx.beginPath();
+    ctx.roundRect(x, y, size, size, r);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = highlight ? '#fff' : '#2c2825';
+    ctx.font = `500 ${Math.min(14, size * 0.4)}px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(value), x + size/2, y + size/2);
+
+    if (label !== undefined) {
+        ctx.fillStyle = '#9a948e';
+        ctx.font = `400 ${Math.min(10, size * 0.28)}px 'Inter', sans-serif`;
+        ctx.fillText(String(label), x + size/2, y + size - 4);
+    }
+}
+
+function drawArrow(ctx, x1, y1, x2, y2, color, label) {
+    ctx.strokeStyle = color || '#9a948e';
+    ctx.fillStyle = color || '#9a948e';
+    ctx.lineWidth = 2;
+    const angle = Math.atan2(y2-y1, x2-x1);
+    const headLen = 8;
+
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - headLen*Math.cos(angle-0.4), y2 - headLen*Math.sin(angle-0.4));
+    ctx.lineTo(x2 - headLen*Math.cos(angle+0.4), y2 - headLen*Math.sin(angle+0.4));
+    ctx.closePath();
+    ctx.fill();
+
+    if (label) {
+        const mx = (x1+x2)/2, my = (y1+y2)/2;
+        ctx.fillStyle = '#6b6560';
+        ctx.font = "500 11px 'JetBrains Mono', monospace";
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(label, mx, my - 4);
+    }
+}
+
+function drawSectionLabel(ctx, x, y, text, color) {
+    ctx.fillStyle = color || '#6b6560';
+    ctx.font = "600 13px 'Inter', sans-serif";
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(text, x, y);
+}
+
+// ===== SECTION 1: MEMORY LAYOUT =====
+function computeStrides(shape, order) {
+    const n = shape.length;
+    const strides = new Array(n);
+    if (order === 'row') {
+        strides[n-1] = 1;
+        for (let i = n-2; i >= 0; i--) strides[i] = strides[i+1] * shape[i+1];
+    } else {
+        strides[0] = 1;
+        for (let i = 1; i < n; i++) strides[i] = strides[i-1] * shape[i-1];
+    }
+    return strides;
+}
+
+function flatIndex(indices, strides) {
+    let idx = 0;
+    for (let i = 0; i < indices.length; i++) idx += indices[i] * strides[i];
+    return idx;
+}
+
+function drawMemory() {
+    const { ctx, w, h } = setupCanvas('mem-canvas');
+    const shapeStr = document.getElementById('mem-shape').value;
+    const order = document.getElementById('mem-order').value;
+    const shape = shapeStr.split(',').map(Number);
+    const strides = computeStrides(shape, order);
+    const total = shape.reduce((a,b) => a*b, 1);
+
+    // Update state display
+    document.getElementById('mem-state').innerHTML = `
+        <div><span class="label">shape:</span> (${shape.join(', ')})</div>
+        <div><span class="label">strides:</span> (${strides.join(', ')})</div>
+        <div><span class="label">elements:</span> ${total}</div>
+        <div><span class="label">order:</span> ${order === 'row' ? 'row-major' : 'column-major'}</div>
+    `;
+
+    // Draw flat memory strip
+    const cellSize = Math.min(40, (w - 40) / total);
+    const stripX = 20;
+    const stripY = 30;
+    drawSectionLabel(ctx, stripX, 10, 'Flat memory (contiguous array)');
+
+    for (let i = 0; i < total; i++) {
+        const color = PALETTE[i % PALETTE.length];
+        drawCell(ctx, stripX + i * (cellSize + 2), stripY, cellSize, i, color, true);
+    }
+
+    // Draw tensor grid
+    const gridY = stripY + cellSize + 60;
+    drawSectionLabel(ctx, stripX, gridY - 20, `Tensor view — shape (${shape.join(', ')})`);
+
+    if (shape.length === 2) {
+        const [rows, cols] = shape;
+        const gSize = Math.min(44, (w - 80) / cols, (h - gridY - 40) / rows);
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const fi = flatIndex([r, c], strides);
+                const color = PALETTE[fi % PALETTE.length];
+                const x = stripX + c * (gSize + 3);
+                const y = gridY + r * (gSize + 3);
+                drawCell(ctx, x, y, gSize, fi, color, true);
+
+                // Row/col index labels
+                if (r === 0) {
+                    ctx.fillStyle = '#9a948e';
+                    ctx.font = "400 10px 'JetBrains Mono', monospace";
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`c${c}`, x + gSize/2, gridY - 6);
+                }
+                if (c === 0) {
+                    ctx.fillStyle = '#9a948e';
+                    ctx.font = "400 10px 'JetBrains Mono', monospace";
+                    ctx.textAlign = 'right';
+                    ctx.fillText(`r${r}`, stripX - 6, y + gSize/2 + 4);
+                }
+            }
+        }
+
+        // Stride arrows
+        const arrowY = gridY + rows * (gSize + 3) + 30;
+        drawSectionLabel(ctx, stripX, arrowY, 'Stride illustration');
+
+        // Stride along dim 0
+        const s0x = stripX + 10;
+        const s0y = arrowY + 25;
+        ctx.fillStyle = '#2c2825';
+        ctx.font = "500 12px 'Inter', sans-serif";
+        ctx.textAlign = 'left';
+        ctx.fillText(`stride[0] = ${strides[0]}  →  skip ${strides[0]} element${strides[0]>1?'s':''} to move to next row`, s0x, s0y);
+        ctx.fillText(`stride[1] = ${strides[1]}  →  skip ${strides[1]} element${strides[1]>1?'s':''} to move to next column`, s0x, s0y + 22);
+
+    } else if (shape.length === 3) {
+        const [d0, d1, d2] = shape;
+        const gSize = Math.min(34, (w - 80) / (d2 * d0 + d0 * 10), (h - gridY - 40) / d1);
+        for (let i = 0; i < d0; i++) {
+            const ox = stripX + i * (d2 * (gSize + 2) + 20);
+            ctx.fillStyle = '#9a948e';
+            ctx.font = "500 11px 'Inter', sans-serif";
+            ctx.textAlign = 'left';
+            ctx.fillText(`[:, :, :] slice ${i}`, ox, gridY - 6);
+            for (let j = 0; j < d1; j++) {
+                for (let k = 0; k < d2; k++) {
+                    const fi = flatIndex([i, j, k], strides);
+                    const color = PALETTE[fi % PALETTE.length];
+                    drawCell(ctx, ox + k * (gSize + 2), gridY + j * (gSize + 2) + 10, gSize, fi, color, true);
+                }
+            }
+        }
+    }
+}
+
+document.getElementById('mem-shape').addEventListener('change', drawMemory);
+document.getElementById('mem-order').addEventListener('change', drawMemory);
+
+// ===== SECTION 2: RESHAPE / TRANSPOSE / SLICE =====
+let rsState = { applied: false, op: null };
+
+function drawReshape() {
+    const { ctx, w, h } = setupCanvas('rs-canvas');
+    const shapeStr = document.getElementById('rs-source').value;
+    const shape = shapeStr.split(',').map(Number);
+    const total = shape.reduce((a,b) => a*b, 1);
+    const strides = computeStrides(shape, 'row');
+
+    // Generate colored values
+    const values = [];
+    for (let i = 0; i < total; i++) values.push(i);
+
+    // Source grid
+    const halfW = (w - 60) / 2;
+    const cellSize = Math.min(44, halfW / Math.max(...shape), (h - 100) / Math.max(...shape));
+
+    drawSectionLabel(ctx, 20, 10, `Before — shape (${shape.join(', ')})`);
+    drawGrid(ctx, 20, 40, shape, values, strides, cellSize);
+
+    // Arrow in middle
+    const midX = halfW + 30;
+    drawArrow(ctx, midX - 20, h/2, midX + 20, h/2, '#3d6b9e');
+
+    if (rsState.applied) {
+        const op = document.getElementById('rs-op').value;
+        const result = applyOp(shape, values, strides, op);
+        drawSectionLabel(ctx, midX + 40, 10, `After — shape (${result.shape.join(', ')})`);
+        drawGrid(ctx, midX + 40, 40, result.shape, result.values, result.strides, cellSize);
+
+        document.getElementById('rs-state').innerHTML = `
+            <div><span class="label">before:</span> shape (${shape.join(',')}), strides (${strides.join(',')})</div>
+            <div><span class="label">after:</span> shape (${result.shape.join(',')}), strides (${result.strides.join(',')})</div>
+            <div><span class="label">data copied:</span> ${result.copied ? 'yes' : 'no — same memory'}</div>
+        `;
+    } else {
+        ctx.fillStyle = '#9a948e';
+        ctx.font = "500 14px 'Inter', sans-serif";
+        ctx.textAlign = 'center';
+        ctx.fillText('Select an operation and click Apply', midX + 40 + halfW/2, h/2);
+
+        document.getElementById('rs-state').innerHTML = `
+            <div><span class="label">before:</span> shape (${shape.join(',')}), strides (${strides.join(',')})</div>
+            <div><span class="label">after:</span> —</div>
+            <div><span class="label">data copied:</span> —</div>
+        `;
+    }
+}
+
+function drawGrid(ctx, ox, oy, shape, values, strides, cellSize) {
+    if (shape.length === 1) {
+        for (let i = 0; i < shape[0]; i++) {
+            const fi = flatIndex([i], strides);
+            const v = values[fi !== undefined ? fi : i];
+            drawCell(ctx, ox + i * (cellSize + 3), oy, cellSize, v, PALETTE[v % PALETTE.length], true);
+        }
+    } else if (shape.length === 2) {
+        for (let r = 0; r < shape[0]; r++) {
+            for (let c = 0; c < shape[1]; c++) {
+                const fi = flatIndex([r, c], strides);
+                const v = values[fi !== undefined ? fi : r * shape[1] + c];
+                drawCell(ctx, ox + c * (cellSize + 3), oy + r * (cellSize + 3), cellSize, v, PALETTE[v % PALETTE.length], true);
+            }
+        }
+    } else if (shape.length === 3) {
+        const sz = Math.min(cellSize, 30);
+        for (let i = 0; i < shape[0]; i++) {
+            const bx = ox;
+            const by = oy + i * (shape[1] * (sz + 2) + 16);
+            ctx.fillStyle = '#9a948e';
+            ctx.font = "400 10px 'Inter', sans-serif";
+            ctx.textAlign = 'left';
+            ctx.fillText(`[${i},:,:]`, bx, by - 3);
+            for (let j = 0; j < shape[1]; j++) {
+                for (let k = 0; k < shape[2]; k++) {
+                    const fi = flatIndex([i, j, k], strides);
+                    const v = values[fi !== undefined ? fi : i * shape[1]*shape[2] + j*shape[2] + k];
+                    drawCell(ctx, bx + k * (sz + 2), by, sz, v, PALETTE[v % PALETTE.length], true);
+                }
+                // next row of this sub-block — adjust by
+            }
+            // Actually draw row by row
+        }
+        // Re-draw properly for 3D
+        const sz2 = Math.min(cellSize, 30);
+        ctx.clearRect(ox - 2, oy - 2, shape[2] * (sz2 + 2) + 50, shape[0] * (shape[1] * (sz2 + 2) + 20) + 10);
+        for (let i = 0; i < shape[0]; i++) {
+            const by = oy + i * (shape[1] * (sz2 + 2) + 18);
+            ctx.fillStyle = '#9a948e';
+            ctx.font = "400 10px 'Inter', sans-serif";
+            ctx.textAlign = 'left';
+            ctx.fillText(`[${i}]`, ox, by - 3);
+            for (let j = 0; j < shape[1]; j++) {
+                for (let k = 0; k < shape[2]; k++) {
+                    const idx = i * shape[1]*shape[2] + j*shape[2] + k;
+                    const v = values[idx];
+                    drawCell(ctx, ox + k * (sz2 + 2), by + j * (sz2 + 2), sz2, v, PALETTE[v % PALETTE.length], true);
+                }
+            }
+        }
+    }
+}
+
+function applyOp(shape, values, strides, op) {
+    const total = values.length;
+    if (op === 'transpose') {
+        if (shape.length !== 2) return { shape: [...shape].reverse(), values, strides: [...strides].reverse(), copied: false };
+        const [r, c] = shape;
+        const newValues = [];
+        for (let j = 0; j < c; j++)
+            for (let i = 0; i < r; i++)
+                newValues.push(values[i * c + j]);
+        return { shape: [c, r], values: newValues, strides: [r, 1], copied: false };
+    }
+    if (op.startsWith('reshape-')) {
+        const newShape = op.slice(8).split(',').map(Number);
+        return { shape: newShape, values, strides: computeStrides(newShape, 'row'), copied: false };
+    }
+    if (op.startsWith('slice-rows-')) {
+        const range = op.slice(11).split(':').map(Number);
+        if (shape.length !== 2) return { shape, values, strides, copied: false };
+        const [r, c] = shape;
+        const newVals = [];
+        for (let i = range[0]; i < range[1]; i++)
+            for (let j = 0; j < c; j++)
+                newVals.push(values[i * c + j]);
+        const ns = [range[1] - range[0], c];
+        return { shape: ns, values: newVals, strides: computeStrides(ns, 'row'), copied: false };
+    }
+    if (op.startsWith('slice-cols-')) {
+        const range = op.slice(11).split(':').map(Number);
+        if (shape.length !== 2) return { shape, values, strides, copied: false };
+        const [r, c] = shape;
+        const newVals = [];
+        for (let i = 0; i < r; i++)
+            for (let j = range[0]; j < range[1]; j++)
+                newVals.push(values[i * c + j]);
+        const ns = [r, range[1] - range[0]];
+        return { shape: ns, values: newVals, strides: computeStrides(ns, 'row'), copied: false };
+    }
+    return { shape, values, strides, copied: false };
+}
+
+document.getElementById('rs-apply').addEventListener('click', () => { rsState.applied = true; drawReshape(); });
+document.getElementById('rs-reset').addEventListener('click', () => { rsState.applied = false; drawReshape(); });
+document.getElementById('rs-source').addEventListener('change', () => { rsState.applied = false; drawReshape(); });
+
+// ===== SECTION 3: BROADCASTING =====
+const bcExamples = [
+    { a: {shape:[3,1], data:[[1],[2],[3]]}, b: {shape:[1,4], data:[[10,20,30,40]]}, op: '+' },
+    { a: {shape:[1], data:[5]}, b: {shape:[3,3], data:[[1,2,3],[4,5,6],[7,8,9]]}, op: '+' },
+    { a: {shape:[3,4], data:[[1,2,3,4],[5,6,7,8],[9,10,11,12]]}, b: {shape:[4], data:[10,20,30,40]}, op: '+' },
+    { a: {shape:[2,3,1], data:[[[1],[2],[3]],[[4],[5],[6]]]}, b: {shape:[1,1,4], data:[[[10,20,30,40]]]}, op: '+' },
+];
+
+let bcAnimState = { step: 0, maxSteps: 3, playing: false, timer: null };
+
+function flattenTensor(data) {
+    if (typeof data === 'number') return [data];
+    return data.flat(Infinity);
+}
+
+function getBroadcastResult(ex) {
+    const aFlat = flattenTensor(ex.a.data);
+    const bFlat = flattenTensor(ex.b.data);
+    const aShape = ex.a.shape;
+    const bShape = ex.b.shape;
+
+    // Determine result shape
+    const maxDim = Math.max(aShape.length, bShape.length);
+    const aPad = new Array(maxDim - aShape.length).fill(1).concat(aShape);
+    const bPad = new Array(maxDim - bShape.length).fill(1).concat(bShape);
+    const rShape = aPad.map((a, i) => Math.max(a, bPad[i]));
+    const rTotal = rShape.reduce((a,b)=>a*b,1);
+
+    // Compute result
+    const result = [];
+    for (let i = 0; i < rTotal; i++) {
+        let rem = i;
+        let aIdx = 0, bIdx = 0;
+        let aMul = 1, bMul = 1;
+        // Compute multi-index
+        const mIdx = [];
+        for (let d = maxDim-1; d >= 0; d--) {
+            mIdx[d] = rem % rShape[d];
+            rem = Math.floor(rem / rShape[d]);
+        }
+        // Map to A and B indices
+        let ai = 0, bi = 0;
+        let aStride = 1, bStride = 1;
+        for (let d = maxDim-1; d >= 0; d--) {
+            const ad = d - (maxDim - aPad.length); // always 0+ since we padded
+            const bd = d - (maxDim - bPad.length);
+            const aVal = aPad[d] === 1 ? 0 : mIdx[d];
+            const bVal = bPad[d] === 1 ? 0 : mIdx[d];
+            ai += aVal * aStride;
+            bi += bVal * bStride;
+            aStride *= aPad[d];
+            bStride *= bPad[d];
+        }
+        // Recompute properly
+        let aLinear = 0, bLinear = 0;
+        let aSt = 1, bSt = 1;
+        for (let d = maxDim-1; d >= 0; d--) {
+            const aCoord = aPad[d] === 1 ? 0 : mIdx[d];
+            const bCoord = bPad[d] === 1 ? 0 : mIdx[d];
+            aLinear += aCoord * aSt;
+            bLinear += bCoord * bSt;
+            aSt *= aPad[d];
+            bSt *= bPad[d];
+        }
+        result.push(aFlat[aLinear] + bFlat[bLinear]);
+    }
+    return { shape: rShape, data: result, aShape: aPad, bShape: bPad };
+}
+
+function drawBroadcast() {
+    const { ctx, w, h } = setupCanvas('bc-canvas');
+    const exIdx = parseInt(document.getElementById('bc-example').value);
+    const ex = bcExamples[exIdx];
+    const step = bcAnimState.step;
+    const res = getBroadcastResult(ex);
+
+    // For 2D and lower examples, draw grids
+    // Step 0: show original shapes
+    // Step 1: show expanded shapes (virtual)
+    // Step 2: show element-wise operation
+    // Step 3: show result
+
+    const maxSteps = 3;
+    bcAnimState.maxSteps = maxSteps;
+    document.getElementById('bc-step-label').textContent = `Step ${step} / ${maxSteps}`;
+    document.getElementById('bc-progress').style.width = `${(step/maxSteps)*100}%`;
+
+    document.getElementById('bc-state').innerHTML = `
+        <div><span class="label">A shape:</span> (${ex.a.shape.join(', ')})</div>
+        <div><span class="label">B shape:</span> (${ex.b.shape.join(', ')})</div>
+        <div><span class="label">result:</span> (${res.shape.join(', ')})</div>
+    `;
+
+    // Limit to 2D display for simplicity (flatten 3D examples to 2D view)
+    const is3D = res.shape.length === 3;
+    if (is3D) {
+        draw3DBroadcast(ctx, w, h, ex, res, step);
+        return;
+    }
+
+    const aFlat = flattenTensor(ex.a.data);
+    const bFlat = flattenTensor(ex.b.data);
+
+    const cellSize = 42;
+    const gap = 3;
+
+    // Layout: A on left, + in middle, B on right, = and Result below
+    const aRows = res.aShape.length >= 2 ? res.aShape[res.aShape.length-2] : 1;
+    const aCols = res.aShape[res.aShape.length-1];
+    const bRows = res.bShape.length >= 2 ? res.bShape[res.bShape.length-2] : 1;
+    const bCols = res.bShape[res.bShape.length-1];
+    const rRows = res.shape.length >= 2 ? res.shape[res.shape.length-2] : 1;
+    const rCols = res.shape[res.shape.length-1];
+
+    // Expand shapes for steps >= 1
+    const eaRows = step >= 1 ? rRows : aRows;
+    const eaCols = step >= 1 ? rCols : aCols;
+    const ebRows = step >= 1 ? rRows : bRows;
+    const ebCols = step >= 1 ? rCols : bCols;
+
+    const startX = 20;
+    const startY = 40;
+
+    // Draw A
+    drawSectionLabel(ctx, startX, startY - 25, step >= 1 && (aRows !== rRows || aCols !== rCols) ? 'A (broadcast-expanded)' : 'A');
+    for (let r = 0; r < eaRows; r++) {
+        for (let c = 0; c < eaCols; c++) {
+            const origR = aRows === 1 ? 0 : r;
+            const origC = aCols === 1 ? 0 : c;
+            const idx = origR * aCols + origC;
+            const v = aFlat[idx];
+            const isExpanded = (aRows === 1 && r > 0) || (aCols === 1 && c > 0);
+            const color = isExpanded ? '#9a948e' : '#3d6b9e';
+            drawCell(ctx, startX + c*(cellSize+gap), startY + r*(cellSize+gap), cellSize, v, color, true);
+        }
+    }
+
+    // Plus sign
+    const plusX = startX + eaCols * (cellSize + gap) + 15;
+    const plusY = startY + (eaRows * (cellSize+gap)) / 2;
+    ctx.fillStyle = '#2c2825';
+    ctx.font = "600 24px 'Inter', sans-serif";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('+', plusX, plusY);
+
+    // Draw B
+    const bStartX = plusX + 25;
+    drawSectionLabel(ctx, bStartX, startY - 25, step >= 1 && (bRows !== rRows || bCols !== rCols) ? 'B (broadcast-expanded)' : 'B');
+    for (let r = 0; r < ebRows; r++) {
+        for (let c = 0; c < ebCols; c++) {
+            const origR = bRows === 1 ? 0 : r;
+            const origC = bCols === 1 ? 0 : c;
+            const idx = origR * bCols + origC;
+            const v = bFlat[idx];
+            const isExpanded = (bRows === 1 && r > 0) || (bCols === 1 && c > 0);
+            const color = isExpanded ? '#9a948e' : '#27864a';
+            drawCell(ctx, bStartX + c*(cellSize+gap), startY + r*(cellSize+gap), cellSize, v, color, true);
+        }
+    }
+
+    // Result (steps >= 2)
+    if (step >= 2) {
+        const resY = startY + Math.max(eaRows, ebRows) * (cellSize + gap) + 30;
+        const eqX = startX;
+        drawSectionLabel(ctx, eqX, resY - 20, step >= 3 ? 'Result' : 'Computing element-wise...');
+
+        // Draw = sign
+        ctx.fillStyle = '#2c2825';
+        ctx.font = "600 24px 'Inter', sans-serif";
+        ctx.textAlign = 'center';
+        ctx.fillText('=', eqX - 10, resY + rRows*(cellSize+gap)/2);
+
+        for (let r = 0; r < rRows; r++) {
+            for (let c = 0; c < rCols; c++) {
+                const idx = r * rCols + c;
+                const v = res.data[idx];
+                const alpha = step >= 3 ? 1 : 0.6;
+                const color = '#7b5ea7';
+                drawCell(ctx, eqX + 10 + c*(cellSize+gap), resY + r*(cellSize+gap), cellSize, v, color, true);
+            }
+        }
+    }
+}
+
+function draw3DBroadcast(ctx, w, h, ex, res, step) {
+    // Simplified: show shapes and result textually for 3D
+    ctx.fillStyle = '#2c2825';
+    ctx.font = "500 14px 'Inter', sans-serif";
+    ctx.textAlign = 'left';
+    const y0 = 40;
+    ctx.fillText(`A: shape (${ex.a.shape.join(', ')})`, 20, y0);
+    ctx.fillText(`B: shape (${ex.b.shape.join(', ')})`, 20, y0 + 30);
+
+    if (step >= 1) {
+        ctx.fillStyle = '#3d6b9e';
+        ctx.fillText(`Step 1: Pad shapes to equal dimensions`, 20, y0 + 70);
+        ctx.font = "500 13px 'JetBrains Mono', monospace";
+        ctx.fillText(`A: (${res.aShape.join(', ')})`, 40, y0 + 95);
+        ctx.fillText(`B: (${res.bShape.join(', ')})`, 40, y0 + 115);
+    }
+    if (step >= 2) {
+        ctx.fillStyle = '#27864a';
+        ctx.font = "500 14px 'Inter', sans-serif";
+        ctx.fillText(`Step 2: Expand size-1 dims to match`, 20, y0 + 150);
+        ctx.font = "500 13px 'JetBrains Mono', monospace";
+        ctx.fillText(`A: (${res.shape.join(', ')})  ← ${res.aShape.map((a,i) => a===1 && res.shape[i]>1 ? 'expanded' : 'same').join(', ')}`, 40, y0 + 175);
+        ctx.fillText(`B: (${res.shape.join(', ')})  ← ${res.bShape.map((b,i) => b===1 && res.shape[i]>1 ? 'expanded' : 'same').join(', ')}`, 40, y0 + 195);
+    }
+    if (step >= 3) {
+        ctx.fillStyle = '#7b5ea7';
+        ctx.font = "500 14px 'Inter', sans-serif";
+        ctx.fillText(`Step 3: Element-wise addition → result shape (${res.shape.join(', ')})`, 20, y0 + 235);
+        ctx.font = "500 13px 'JetBrains Mono', monospace";
+        // Show a slice of the result
+        const rCols = res.shape[res.shape.length - 1];
+        const rRows = res.shape.length >= 2 ? res.shape[res.shape.length - 2] : 1;
+        const slices = res.shape.length >= 3 ? res.shape[0] : 1;
+        let yi = y0 + 260;
+        for (let s = 0; s < slices && s < 2; s++) {
+            ctx.fillText(`[${s},:,:] =`, 40, yi);
+            yi += 20;
+            for (let r = 0; r < rRows; r++) {
+                const row = [];
+                for (let c = 0; c < rCols; c++) {
+                    row.push(res.data[s * rRows * rCols + r * rCols + c]);
+                }
+                ctx.fillText(`  [${row.join(', ')}]`, 40, yi);
+                yi += 18;
+            }
+            yi += 5;
+        }
+    }
+}
+
+document.getElementById('bc-step').addEventListener('click', () => {
+    if (bcAnimState.step < bcAnimState.maxSteps) bcAnimState.step++;
+    drawBroadcast();
+});
+document.getElementById('bc-reset').addEventListener('click', () => {
+    bcAnimState.step = 0;
+    if (bcAnimState.timer) { clearInterval(bcAnimState.timer); bcAnimState.playing = false; }
+    drawBroadcast();
+});
+document.getElementById('bc-play').addEventListener('click', () => {
+    if (bcAnimState.playing) return;
+    bcAnimState.step = 0;
+    bcAnimState.playing = true;
+    drawBroadcast();
+    bcAnimState.timer = setInterval(() => {
+        bcAnimState.step++;
+        drawBroadcast();
+        if (bcAnimState.step >= bcAnimState.maxSteps) {
+            clearInterval(bcAnimState.timer);
+            bcAnimState.playing = false;
+        }
+    }, 800);
+});
+document.getElementById('bc-example').addEventListener('change', () => {
+    bcAnimState.step = 0;
+    drawBroadcast();
+});
+
+// ===== SECTION 4: AUTOGRAD =====
+let agAnimState = { step: 0, maxSteps: 9, playing: false, timer: null };
+
+function getAutogradValues() {
+    const W = parseFloat(document.getElementById('ag-w').value);
+    const x = parseFloat(document.getElementById('ag-x').value);
+    const b = parseFloat(document.getElementById('ag-b').value);
+    const y = parseFloat(document.getElementById('ag-y').value);
+
+    // Forward: z1 = W*x, z2 = z1+b, z3 = z2-y, L = z3^2
+    const z1 = W * x;
+    const z2 = z1 + b;
+    const z3 = z2 - y;
+    const L = z3 * z3;
+
+    // Backward: dL/dL = 1, dL/dz3 = 2*z3, dL/dz2 = dL/dz3*1, dL/dz1 = dL/dz2*1
+    // dL/dW = dL/dz1 * x, dL/dx = dL/dz1 * W, dL/db = dL/dz2 * 1
+    const dL_dL = 1;
+    const dL_dz3 = 2 * z3;
+    const dL_dz2 = dL_dz3; // d(z3)/d(z2) = 1
+    const dL_dz1 = dL_dz2; // d(z2)/d(z1) = 1
+    const dL_dW = dL_dz1 * x;
+    const dL_dx = dL_dz1 * W;
+    const dL_db = dL_dz2;
+
+    return {
+        params: { W, x, b, y },
+        forward: { z1, z2, z3, L },
+        grads: { dL_dL, dL_dz3, dL_dz2, dL_dz1, dL_dW, dL_dx, dL_db }
+    };
+}
+
+function drawAutograd() {
+    const { ctx, w, h } = setupCanvas('ag-canvas');
+    const vals = getAutogradValues();
+    const step = agAnimState.step;
+
+    // Node positions — spread across full width with generous spacing
+    const nodeR = 28;
+    const yMid = h / 2 - 20;
+    const xGap = (w - 80) / 6;
+    const x0 = 40;
+
+    const nodes = [
+        { id: 'W', label: 'W', x: x0, y: yMid - 65, val: vals.params.W, type: 'param' },
+        { id: 'x', label: 'x', x: x0, y: yMid + 65, val: vals.params.x, type: 'input' },
+        { id: 'mul', label: '×', x: x0 + xGap, y: yMid, val: vals.forward.z1, type: 'op', fwdStep: 1 },
+        { id: 'b', label: 'b', x: x0 + 1.5*xGap, y: yMid + 95, val: vals.params.b, type: 'param' },
+        { id: 'add', label: '+', x: x0 + 2*xGap, y: yMid, val: vals.forward.z2, type: 'op', fwdStep: 2 },
+        { id: 'y', label: 'y', x: x0 + 2.5*xGap, y: yMid + 95, val: vals.params.y, type: 'target' },
+        { id: 'sub', label: '−', x: x0 + 3*xGap, y: yMid, val: vals.forward.z3, type: 'op', fwdStep: 3 },
+        { id: 'sq', label: '( )²', x: x0 + 4*xGap, y: yMid, val: vals.forward.L, type: 'op', fwdStep: 4 },
+        { id: 'L', label: 'L', x: x0 + 5*xGap, y: yMid, val: vals.forward.L, type: 'loss', fwdStep: 4 },
+    ];
+
+    const edges = [
+        { from: 'W', to: 'mul' },
+        { from: 'x', to: 'mul' },
+        { from: 'mul', to: 'add' },
+        { from: 'b', to: 'add' },
+        { from: 'add', to: 'sub' },
+        { from: 'y', to: 'sub' },
+        { from: 'sub', to: 'sq' },
+        { from: 'sq', to: 'L' },
+    ];
+
+    // Backward steps: step 5 = dL/dL, 6 = dL/dz3 (sq→sub), 7 = dL/dz2 (sub→add), 8 = dL/dz1 (add→mul), 9 = dL/dW, dL/dx, dL/db
+    const bwdEdges = [
+        { from: 'L', to: 'sq', step: 5, grad: `∂L/∂L = ${vals.grads.dL_dL.toFixed(1)}` },
+        { from: 'sq', to: 'sub', step: 6, grad: `∂L/∂z₃ = 2z₃ = ${vals.grads.dL_dz3.toFixed(2)}` },
+        { from: 'sub', to: 'add', step: 7, grad: `∂L/∂z₂ = ${vals.grads.dL_dz2.toFixed(2)}` },
+        { from: 'sub', to: 'y', step: 7, grad: `−${Math.abs(vals.grads.dL_dz2).toFixed(2)}` },
+        { from: 'add', to: 'mul', step: 8, grad: `∂L/∂z₁ = ${vals.grads.dL_dz1.toFixed(2)}` },
+        { from: 'add', to: 'b', step: 8, grad: `∂L/∂b = ${vals.grads.dL_db.toFixed(2)}` },
+        { from: 'mul', to: 'W', step: 9, grad: `∂L/∂W = ${vals.grads.dL_dW.toFixed(2)}` },
+        { from: 'mul', to: 'x', step: 9, grad: `∂L/∂x = ${vals.grads.dL_dx.toFixed(2)}` },
+    ];
+
+    const nodeMap = {};
+    nodes.forEach(n => nodeMap[n.id] = n);
+
+    // Draw edges (forward)
+    edges.forEach(e => {
+        const from = nodeMap[e.from], to = nodeMap[e.to];
+        const angle = Math.atan2(to.y - from.y, to.x - from.x);
+        const x1 = from.x + nodeR * Math.cos(angle);
+        const y1 = from.y + nodeR * Math.sin(angle);
+        const x2 = to.x - nodeR * Math.cos(angle);
+        const y2 = to.y - nodeR * Math.sin(angle);
+        ctx.strokeStyle = '#e2ddd5';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        // Arrowhead
+        const hl = 7;
+        ctx.fillStyle = '#e2ddd5';
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - hl*Math.cos(angle-0.4), y2 - hl*Math.sin(angle-0.4));
+        ctx.lineTo(x2 - hl*Math.cos(angle+0.4), y2 - hl*Math.sin(angle+0.4));
+        ctx.closePath();
+        ctx.fill();
+    });
+
+    // Draw backward edges
+    if (step >= 5) {
+        bwdEdges.forEach(be => {
+            if (step < be.step) return;
+            const from = nodeMap[be.from], to = nodeMap[be.to];
+            const angle = Math.atan2(to.y - from.y, to.x - from.x);
+            const x1 = from.x + (nodeR + 3) * Math.cos(angle);
+            const y1 = from.y + (nodeR + 3) * Math.sin(angle);
+            const x2 = to.x - (nodeR + 3) * Math.cos(angle);
+            const y2 = to.y - (nodeR + 3) * Math.sin(angle);
+
+            // Dashed line
+            ctx.strokeStyle = '#c0392b';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 3]);
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Arrowhead
+            const hl = 7;
+            ctx.fillStyle = '#c0392b';
+            ctx.beginPath();
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - hl*Math.cos(angle-0.4), y2 - hl*Math.sin(angle-0.4));
+            ctx.lineTo(x2 - hl*Math.cos(angle+0.4), y2 - hl*Math.sin(angle+0.4));
+            ctx.closePath();
+            ctx.fill();
+
+            // Gradient label — position to avoid overlap
+            const mx = (x1+x2)/2, my = (y1+y2)/2;
+            ctx.fillStyle = '#c0392b';
+            ctx.font = "500 10px 'JetBrains Mono', monospace";
+            ctx.textAlign = 'center';
+            const isHorizontal = Math.abs(to.y - from.y) < 20;
+            const goesDown = to.y > from.y;
+            const labelOffset = isHorizontal ? -12 : (goesDown ? 14 : -10);
+            ctx.fillText(be.grad, mx, my + labelOffset);
+        });
+    }
+
+    // Draw nodes
+    nodes.forEach(n => {
+        const isForwardActive = n.fwdStep !== undefined && step >= n.fwdStep;
+        const isAlwaysVisible = n.type === 'param' || n.type === 'input' || n.type === 'target';
+        const visible = step === 0 || isAlwaysVisible || isForwardActive;
+
+        // Node colors
+        let fillColor = '#f5f3ef';
+        let strokeColor = '#e2ddd5';
+        let textColor = '#2c2825';
+
+        if (n.type === 'param') { fillColor = '#e8f0f8'; strokeColor = '#3d6b9e'; }
+        else if (n.type === 'input') { fillColor = '#e8f5e9'; strokeColor = '#27864a'; }
+        else if (n.type === 'target') { fillColor = '#fce4ec'; strokeColor = '#c0392b'; }
+        else if (n.type === 'loss') { fillColor = '#f3e5f5'; strokeColor = '#7b5ea7'; }
+
+        if (isForwardActive && n.type === 'op') {
+            fillColor = '#fff8e1';
+            strokeColor = '#b87a1a';
+        }
+        if (step >= 5 && n.type === 'loss') {
+            fillColor = '#fce4ec';
+            strokeColor = '#c0392b';
+        }
+
+        // Glow for active step
+        if ((step > 0 && step <= 4 && n.fwdStep === step) ||
+            (step >= 5 && bwdEdges.some(be => be.step === step && (be.from === n.id || be.to === n.id)))) {
+            ctx.shadowColor = strokeColor;
+            ctx.shadowBlur = 12;
+        }
+
+        ctx.fillStyle = fillColor;
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, nodeR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Label
+        ctx.fillStyle = textColor;
+        ctx.font = n.type === 'op' ? "600 16px 'Inter', sans-serif" : "600 13px 'Inter', sans-serif";
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(n.label, n.x, n.y);
+
+        // Value below node (shown after forward pass reaches it)
+        if ((isAlwaysVisible || isForwardActive) && step > 0) {
+            ctx.fillStyle = '#6b6560';
+            ctx.font = "500 11px 'JetBrains Mono', monospace";
+            ctx.textAlign = 'center';
+            ctx.fillText(n.val.toFixed(2), n.x, n.y + nodeR + 14);
+        }
+    });
+
+    // Step descriptions
+    const stepLabels = [
+        'Ready — set parameters and click Play',
+        'Forward: z₁ = W × x',
+        'Forward: z₂ = z₁ + b',
+        'Forward: z₃ = z₂ − y',
+        'Forward: L = z₃²',
+        'Backward: ∂L/∂L = 1',
+        'Backward: ∂L/∂z₃ = 2·z₃ (chain rule through square)',
+        'Backward: ∂L/∂z₂ = ∂L/∂z₃ · 1 (through subtraction)',
+        'Backward: ∂L/∂z₁ = ∂L/∂z₂ · 1, ∂L/∂b = ∂L/∂z₂',
+        'Backward: ∂L/∂W = ∂L/∂z₁ · x, ∂L/∂x = ∂L/∂z₁ · W',
+    ];
+    document.getElementById('ag-step-label').textContent = stepLabels[step] || `Step ${step}`;
+    document.getElementById('ag-progress').style.width = `${(step / agAnimState.maxSteps) * 100}%`;
+
+    // Update gradient display
+    if (step >= 5) {
+        const g = vals.grads;
+        document.getElementById('ag-state').innerHTML = `
+            <div><span class="label">forward:</span> z₁=${vals.forward.z1.toFixed(2)}, z₂=${vals.forward.z2.toFixed(2)}, z₃=${vals.forward.z3.toFixed(2)}, L=${vals.forward.L.toFixed(2)}</div>
+            <div><span class="label">gradients:</span> ∂L/∂W=${g.dL_dW.toFixed(2)}, ∂L/∂x=${g.dL_dx.toFixed(2)}, ∂L/∂b=${g.dL_db.toFixed(2)}</div>
+        `;
+    } else if (step > 0) {
+        document.getElementById('ag-state').innerHTML = `
+            <div><span class="label">forward:</span> z₁=${vals.forward.z1.toFixed(2)}, z₂=${vals.forward.z2.toFixed(2)}, z₃=${vals.forward.z3.toFixed(2)}, L=${vals.forward.L.toFixed(2)}</div>
+            <div><span class="label">gradients:</span> (backward pass not started)</div>
+        `;
+    } else {
+        document.getElementById('ag-state').innerHTML = `
+            <div><span class="label">forward:</span> W·x → +b → −y → (·)² → L</div>
+            <div><span class="label">gradients:</span> —</div>
+        `;
+    }
+
+    // Legend
+    ctx.fillStyle = '#9a948e';
+    ctx.font = "400 11px 'Inter', sans-serif";
+    ctx.textAlign = 'left';
+    const ly = h - 20;
+    // Forward arrow legend
+    ctx.strokeStyle = '#e2ddd5'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(20, ly); ctx.lineTo(50, ly); ctx.stroke();
+    ctx.fillText('forward', 55, ly + 4);
+    // Backward arrow legend
+    ctx.strokeStyle = '#c0392b'; ctx.setLineDash([5,3]);
+    ctx.beginPath(); ctx.moveTo(120, ly); ctx.lineTo(150, ly); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#c0392b';
+    ctx.fillText('backward (gradient)', 155, ly + 4);
+}
+
+// Slider value displays
+['ag-w', 'ag-x', 'ag-b', 'ag-y'].forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('input', () => {
+        document.getElementById(id + '-val').textContent = parseFloat(el.value).toFixed(1);
+        if (agAnimState.step > 0) {
+            agAnimState.step = agAnimState.maxSteps; // Jump to end to show updated values
+            drawAutograd();
+        }
+    });
+});
+
+document.getElementById('ag-step').addEventListener('click', () => {
+    if (agAnimState.step < agAnimState.maxSteps) agAnimState.step++;
+    drawAutograd();
+});
+document.getElementById('ag-reset').addEventListener('click', () => {
+    agAnimState.step = 0;
+    if (agAnimState.timer) { clearInterval(agAnimState.timer); agAnimState.playing = false; }
+    drawAutograd();
+});
+document.getElementById('ag-play').addEventListener('click', () => {
+    if (agAnimState.playing) return;
+    agAnimState.step = 0;
+    agAnimState.playing = true;
+    drawAutograd();
+    agAnimState.timer = setInterval(() => {
+        agAnimState.step++;
+        drawAutograd();
+        if (agAnimState.step >= agAnimState.maxSteps) {
+            clearInterval(agAnimState.timer);
+            agAnimState.playing = false;
+        }
+    }, 700);
+});
+
+// ===== INITIAL DRAW =====
+function initAll() {
+    drawMemory();
+    // Pre-render other sections when their tab is selected
+}
+
+// Handle resize
+let resizeTimer;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+        const active = document.querySelector('.tab.active').dataset.tab;
+        if (active === 'memory') drawMemory();
+        else if (active === 'reshape') drawReshape();
+        else if (active === 'broadcast') drawBroadcast();
+        else if (active === 'autograd') drawAutograd();
+    }, 150);
+});
+
+initAll();
+</script>
+</body>
+</html>

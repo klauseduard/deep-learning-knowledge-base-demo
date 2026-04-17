@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SGD by the Numbers — A Worked Example</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    --bg: #fafaf8;
+    --surface: #ffffff;
+    --surface-alt: #f5f3ef;
+    --border: #e2ddd5;
+    --text: #2c2825;
+    --text-secondary: #6b6560;
+    --text-tertiary: #9a948e;
+    --accent: #3d6b9e;
+    --accent-light: #e8f0f8;
+    --success: #27864a;
+    --success-light: #e8f5ec;
+    --danger: #c0392b;
+    --danger-light: #fdeaea;
+    --warning: #b87a1a;
+    --warning-light: #fef6e8;
+    --purple: #7b5ea7;
+    --purple-light: #f0ebf5;
+    --teal: #1a7a7a;
+    --teal-light: #e6f4f4;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 2rem 2rem 6rem;
+}
+
+h1 { font-family: 'Source Serif 4', serif; font-size: 2rem; margin-bottom: 0.5rem; }
+h2 { font-family: 'Source Serif 4', serif; font-size: 1.5rem; margin-top: 3rem; margin-bottom: 1rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+h3 { font-family: 'Source Serif 4', serif; font-size: 1.15rem; margin-top: 1.75rem; margin-bottom: 0.6rem; }
+p { margin-bottom: 1rem; }
+.subtitle { color: var(--text-secondary); font-size: 1.05rem; margin-bottom: 2rem; }
+
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.9em; background: var(--surface-alt); padding: 0.1em 0.35em; border-radius: 3px; }
+
+.hint { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 0.75rem 1rem; margin: 1.25rem 0; font-size: 0.9rem; color: var(--text-secondary); }
+.hint::before { content: "What to notice: "; font-weight: 600; color: var(--accent); }
+
+.key-answer { background: var(--success-light); border-left: 3px solid var(--success); padding: 0.75rem 1rem; margin: 1.25rem 0; font-size: 0.9rem; }
+.key-answer::before { content: "Key insight: "; font-weight: 600; color: var(--success); }
+
+.warning-box { background: var(--warning-light); border-left: 3px solid var(--warning); padding: 0.75rem 1rem; margin: 1.25rem 0; font-size: 0.9rem; }
+
+.compare-table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+.compare-table th, .compare-table td { padding: 0.5rem 0.75rem; border: 1px solid var(--border); text-align: center; }
+.compare-table th { background: var(--surface-alt); font-weight: 600; text-align: center; }
+.compare-table td:first-child { font-weight: 500; text-align: left; }
+
+.math-block { text-align: center; margin: 1rem 0; padding: 0.75rem; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
+
+/* Step-through */
+.step-container { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 1.5rem 0; }
+.step-controls { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: var(--surface-alt); border-bottom: 1px solid var(--border); }
+.step-controls button { font-family: 'Inter', sans-serif; font-size: 0.85rem; padding: 0.35rem 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); cursor: pointer; }
+.step-controls button:hover { background: var(--accent-light); }
+.step-controls button:disabled { opacity: 0.4; cursor: default; }
+.step-controls button:disabled:hover { background: var(--surface); }
+.step-controls .step-label { margin-left: auto; font-size: 0.85rem; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; }
+.step-body { padding: 1.5rem; min-height: 180px; }
+.step-body .math-line { margin: 0.6rem 0; padding: 0.4rem 0; }
+.step-body .explanation { color: var(--text-secondary); font-size: 0.9rem; margin: 0.5rem 0; padding-left: 1rem; border-left: 2px solid var(--border); }
+.computed { font-family: 'JetBrains Mono', monospace; background: var(--accent-light); padding: 0.15em 0.4em; border-radius: 3px; font-weight: 500; }
+.computed-grad { font-family: 'JetBrains Mono', monospace; background: var(--purple-light); padding: 0.15em 0.4em; border-radius: 3px; font-weight: 500; }
+.computed-update { font-family: 'JetBrains Mono', monospace; background: var(--success-light); padding: 0.15em 0.4em; border-radius: 3px; font-weight: 500; }
+
+.highlight-forward { color: var(--accent); }
+.highlight-backward { color: var(--danger); }
+.highlight-gradient { color: var(--purple); }
+.highlight-update { color: var(--success); }
+
+/* Diagram */
+.diagram-canvas { display: block; width: 100%; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); margin: 1.5rem 0; }
+
+/* Epoch runner */
+.epoch-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; }
+.epoch-title { font-family: 'Source Serif 4', serif; font-weight: 600; font-size: 1rem; margin-bottom: 0.75rem; color: var(--accent); }
+.epoch-controls { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+.epoch-controls label { font-size: 0.85rem; color: var(--text-secondary); }
+.epoch-controls input[type="range"] { width: 120px; accent-color: var(--accent); }
+.epoch-controls select, .epoch-controls button { font-family: 'Inter', sans-serif; font-size: 0.85rem; padding: 0.3rem 0.6rem; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); cursor: pointer; }
+.epoch-controls button:hover { background: var(--accent-light); }
+.epoch-log { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; background: var(--surface-alt); border-radius: 6px; padding: 0.75rem 1rem; max-height: 300px; overflow-y: auto; line-height: 1.8; }
+.epoch-log .log-epoch { color: var(--accent); font-weight: 600; }
+.epoch-log .log-loss { color: var(--text); }
+.epoch-log .log-grad { color: var(--purple); }
+.epoch-log .log-update { color: var(--success); }
+.epoch-log .log-dim { color: var(--text-tertiary); }
+</style>
+</head>
+<body>
+
+<h1>SGD by the Numbers</h1>
+<p class="subtitle">A worked example of stochastic gradient descent: mini-batches, gradient averaging, and parameter updates — with real arithmetic at every step.</p>
+
+<p>The <a href="index.html">gradient descent interactive</a> shows what SGD looks like from the outside — trajectories on a loss landscape. The <a href="../backpropagation/index.html">backpropagation walkthrough</a> shows how to compute gradients for a single example. This page fills the gap between them: <strong>how SGD uses those per-example gradients to actually update parameters</strong>.</p>
+
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2>1. The Setup</h2>
+
+<p>We use the same tiny network as the backpropagation walkthrough:</p>
+
+<div class="math-block">
+    $x \xrightarrow{w_1} z_1 = w_1 x + b_1 \xrightarrow{\sigma} a_1 = \sigma(z_1) \xrightarrow{w_2} \hat{y} = w_2 a_1 + b_2 \xrightarrow{\mathcal{L}} L = \tfrac{1}{2}(\hat{y} - y)^2$
+</div>
+
+<p>But now we have a <strong>dataset</strong> of 6 training examples, not just one:</p>
+
+<table class="compare-table">
+    <tr><th>Example</th><th>$x$</th><th>$y$ (target)</th></tr>
+    <tr><td>1</td><td>1.5</td><td>0.8</td></tr>
+    <tr><td>2</td><td>0.3</td><td>0.2</td></tr>
+    <tr><td>3</td><td>−1.0</td><td>0.5</td></tr>
+    <tr><td>4</td><td>2.0</td><td>1.0</td></tr>
+    <tr><td>5</td><td>−0.5</td><td>0.3</td></tr>
+    <tr><td>6</td><td>0.8</td><td>0.6</td></tr>
+</table>
+
+<p><strong>Parameters:</strong> $w_1 = 0.5$, $b_1 = 0.1$, $w_2 = -0.3$, $b_2 = 0.4$ &nbsp; <strong>Learning rate:</strong> $\eta = 0.5$</p>
+
+<h3>Full-batch vs. mini-batch vs. stochastic</h3>
+
+<table class="compare-table">
+    <tr><th>Variant</th><th>Batch size</th><th>Gradients averaged over</th><th>Updates per epoch</th></tr>
+    <tr><td style="text-align:left"><strong>Full-batch GD</strong></td><td>$N$ (all data)</td><td>All 6 examples</td><td>1</td></tr>
+    <tr><td style="text-align:left"><strong>Mini-batch SGD</strong></td><td>$B$ (e.g., 3)</td><td>Random subset of 3</td><td>2</td></tr>
+    <tr><td style="text-align:left"><strong>Pure SGD</strong></td><td>1</td><td>Single random example</td><td>6</td></tr>
+</table>
+
+<p>In practice, "SGD" almost always means mini-batch SGD. We'll use <strong>batch size $B = 3$</strong>, giving us 2 mini-batches per epoch.</p>
+
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2>2. One SGD Step, in Detail</h2>
+
+<p>Suppose the first mini-batch contains examples 1, 2, and 3. The SGD recipe is:</p>
+<ol style="margin: 0.75rem 0 1rem 1.5rem;">
+    <li>Run the forward + backward pass on <strong>each</strong> example in the batch (3 backward passes)</li>
+    <li><strong>Average</strong> the per-example gradients</li>
+    <li>Update each parameter: $w \leftarrow w - \eta \cdot \overline{\nabla L}$</li>
+</ol>
+
+<canvas id="sgd-diagram" class="diagram-canvas" height="200"></canvas>
+
+<div class="step-container" id="sgd-stepper">
+    <div class="step-controls">
+        <button id="sgd-prev" disabled>← Prev</button>
+        <button id="sgd-next">Next →</button>
+        <button id="sgd-reset" style="margin-left: 0.5rem;">Reset</button>
+        <span class="step-label" id="sgd-step-label">Step 1 / 9</span>
+    </div>
+    <div class="step-body" id="sgd-step-body"></div>
+</div>
+
+<div class="hint">Each example "pulls" the parameters in a slightly different direction. Averaging smooths out these conflicting signals. A larger batch gives a smoother average (closer to the true gradient) but costs more compute per step.</div>
+
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2>3. Why "Stochastic"?</h2>
+
+<p>The word <em>stochastic</em> means "random." Each mini-batch is a <strong>random sample</strong> from the dataset, so the gradient computed from it is a noisy estimate of the true (full-batch) gradient. Different random draws give different gradients:</p>
+
+<div id="stochastic-demo" class="epoch-panel">
+    <div class="epoch-title">Batch randomness: same parameters, different batches</div>
+    <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+        Each row shows the averaged gradient for $w_1$ from a different random batch of 3 examples.
+        The true (full-batch) gradient uses all 6 examples.
+    </p>
+    <div id="stochastic-table"></div>
+    <button id="stochastic-resample" style="margin-top: 0.75rem; font-family: 'Inter', sans-serif; font-size: 0.85rem; padding: 0.35rem 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); cursor: pointer;">Draw 5 new random batches</button>
+</div>
+
+<div class="key-answer">
+    Each mini-batch gradient is a noisy estimate of the true gradient. Over many steps, the noise averages out and SGD converges — but the noise along the way is beneficial. It prevents the optimizer from settling into sharp minima that memorize training data, acting as <strong>implicit regularization</strong>. This is why SGD often generalizes better than full-batch gradient descent.
+</div>
+
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2>4. Multiple Epochs</h2>
+
+<p>One <strong>epoch</strong> = one complete pass through the dataset. With 6 examples and batch size 3, one epoch is 2 SGD steps. Watch the parameters and loss evolve over several epochs.</p>
+
+<div class="epoch-panel">
+    <div class="epoch-title">Training run</div>
+    <div class="epoch-controls">
+        <label>Learning rate $\eta$:</label>
+        <input type="range" id="ep-lr" min="0.1" max="2.0" step="0.1" value="0.5">
+        <span id="ep-lr-val" style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; min-width: 30px;">0.5</span>
+
+        <label style="margin-left: 1rem;">Batch size:</label>
+        <select id="ep-bs">
+            <option value="1">1 (pure SGD)</option>
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="6">6 (full batch)</option>
+        </select>
+
+        <button id="ep-run" style="margin-left: 1rem;">Run 5 epochs</button>
+        <button id="ep-reset2">Reset</button>
+    </div>
+    <div class="epoch-log" id="ep-log">
+        <span class="log-dim">Press "Run 5 epochs" to start training.</span>
+    </div>
+</div>
+
+<div class="hint">Try $\eta = 2.0$ and watch the loss oscillate or diverge. Then try $\eta = 0.1$ — stable but slow. Compare batch size 1 (very noisy updates) vs. 6 (smooth but only 1 update per epoch). The sweet spot depends on the problem.</div>
+
+<div class="warning-box">
+    <strong>What we skipped:</strong> Real SGD training involves learning rate schedules (warmup + cosine decay), momentum, weight decay, and adaptive optimizers like Adam. These build on the same core loop shown here — compute gradients, average over a batch, update parameters — but modify <em>how</em> the gradient is used. The <a href="index.html">gradient descent interactive</a> visualizes momentum and Adam on loss surfaces. The <a href="../../concepts/optimization-beyond-sgd.md">optimization beyond SGD</a> article covers the full family tree.
+</div>
+
+
+<script>
+// ══════════════════════════════════════════════════
+// Network computation helpers
+// ══════════════════════════════════════════════════
+
+function sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
+
+function forwardBackward(x, y, w1, b1, w2, b2) {
+    // Forward
+    const z1 = w1 * x + b1;
+    const a1 = sigmoid(z1);
+    const yhat = w2 * a1 + b2;
+    const loss = 0.5 * (yhat - y) ** 2;
+
+    // Backward
+    const dL_dyhat = yhat - y;
+    const dL_dw2 = dL_dyhat * a1;
+    const dL_db2 = dL_dyhat;
+    const dL_da1 = dL_dyhat * w2;
+    const sig_d = a1 * (1 - a1);
+    const dL_dz1 = dL_da1 * sig_d;
+    const dL_dw1 = dL_dz1 * x;
+    const dL_db1 = dL_dz1;
+
+    return { z1, a1, yhat, loss, grads: { w1: dL_dw1, b1: dL_db1, w2: dL_dw2, b2: dL_db2 } };
+}
+
+const dataset = [
+    { x: 1.5,  y: 0.8 },
+    { x: 0.3,  y: 0.2 },
+    { x: -1.0, y: 0.5 },
+    { x: 2.0,  y: 1.0 },
+    { x: -0.5, y: 0.3 },
+    { x: 0.8,  y: 0.6 },
+];
+
+const initParams = { w1: 0.5, b1: 0.1, w2: -0.3, b2: 0.4 };
+const lr = 0.5;
+
+// Pre-compute the 3 per-example results for the step-through
+const ex = [0, 1, 2].map(i => forwardBackward(dataset[i].x, dataset[i].y, initParams.w1, initParams.b1, initParams.w2, initParams.b2));
+
+// Averaged gradients
+const avgGrads = { w1: 0, b1: 0, w2: 0, b2: 0 };
+for (const key of ['w1', 'b1', 'w2', 'b2']) {
+    avgGrads[key] = (ex[0].grads[key] + ex[1].grads[key] + ex[2].grads[key]) / 3;
+}
+
+// Updated parameters
+const newParams = {};
+for (const key of ['w1', 'b1', 'w2', 'b2']) {
+    newParams[key] = initParams[key] - lr * avgGrads[key];
+}
+
+// New loss after update (on same batch)
+const newLosses = [0, 1, 2].map(i => forwardBackward(dataset[i].x, dataset[i].y, newParams.w1, newParams.b1, newParams.w2, newParams.b2).loss);
+const avgNewLoss = (newLosses[0] + newLosses[1] + newLosses[2]) / 3;
+const avgOldLoss = (ex[0].loss + ex[1].loss + ex[2].loss) / 3;
+
+function fmt(v, d) { return v >= 0 ? ' ' + v.toFixed(d) : v.toFixed(d); }
+function f4(v) { return v.toFixed(4); }
+
+// ══════════════════════════════════════════════════
+// SGD step-through
+// ══════════════════════════════════════════════════
+
+const sgdSteps = [
+    {
+        phase: 'setup',
+        html: `
+            <div class="math-line"><strong class="highlight-forward">Mini-batch 1:</strong> examples {1, 2, 3} — randomly sampled</div>
+            <table class="compare-table" style="margin: 0.75rem 0;">
+                <tr><th>Example</th><th>$x$</th><th>$y$</th></tr>
+                <tr><td>1</td><td>1.5</td><td>0.8</td></tr>
+                <tr><td>2</td><td>0.3</td><td>0.2</td></tr>
+                <tr><td>3</td><td>−1.0</td><td>0.5</td></tr>
+            </table>
+            <div class="explanation">In real training, the batch is sampled randomly (shuffle the dataset, take groups of $B$). For this walkthrough we take the first 3.</div>
+        `
+    },
+    {
+        phase: 'ex1',
+        html: `
+            <div class="math-line"><strong class="highlight-backward">Example 1:</strong> $x = 1.5$, $y = 0.8$ — forward + backward</div>
+            <div class="math-line">$\\hat{y} = $ <span class="computed">${f4(ex[0].yhat)}</span>, &nbsp; $L = $ <span class="computed">${f4(ex[0].loss)}</span></div>
+            <div class="math-line" style="margin-top: 0.5rem;">Gradients:</div>
+            <div class="math-line">$\\frac{\\partial L}{\\partial w_1} = $ <span class="computed-grad">${f4(ex[0].grads.w1)}</span> &nbsp; $\\frac{\\partial L}{\\partial b_1} = $ <span class="computed-grad">${f4(ex[0].grads.b1)}</span> &nbsp; $\\frac{\\partial L}{\\partial w_2} = $ <span class="computed-grad">${f4(ex[0].grads.w2)}</span> &nbsp; $\\frac{\\partial L}{\\partial b_2} = $ <span class="computed-grad">${f4(ex[0].grads.b2)}</span></div>
+            <div class="explanation">This is the same computation from the <a href="../backpropagation/index.html">backpropagation walkthrough</a> — one forward pass, one backward pass, producing 4 gradients.</div>
+        `
+    },
+    {
+        phase: 'ex2',
+        html: `
+            <div class="math-line"><strong class="highlight-backward">Example 2:</strong> $x = 0.3$, $y = 0.2$ — forward + backward</div>
+            <div class="math-line">$\\hat{y} = $ <span class="computed">${f4(ex[1].yhat)}</span>, &nbsp; $L = $ <span class="computed">${f4(ex[1].loss)}</span></div>
+            <div class="math-line" style="margin-top: 0.5rem;">Gradients:</div>
+            <div class="math-line">$\\frac{\\partial L}{\\partial w_1} = $ <span class="computed-grad">${f4(ex[1].grads.w1)}</span> &nbsp; $\\frac{\\partial L}{\\partial b_1} = $ <span class="computed-grad">${f4(ex[1].grads.b1)}</span> &nbsp; $\\frac{\\partial L}{\\partial w_2} = $ <span class="computed-grad">${f4(ex[1].grads.w2)}</span> &nbsp; $\\frac{\\partial L}{\\partial b_2} = $ <span class="computed-grad">${f4(ex[1].grads.b2)}</span></div>
+            <div class="explanation">Different input → different activations → different gradients. This example has a smaller loss (${f4(ex[1].loss)} vs. ${f4(ex[0].loss)}) so its gradients are smaller in magnitude — it's already closer to the target.</div>
+        `
+    },
+    {
+        phase: 'ex3',
+        html: `
+            <div class="math-line"><strong class="highlight-backward">Example 3:</strong> $x = -1.0$, $y = 0.5$ — forward + backward</div>
+            <div class="math-line">$\\hat{y} = $ <span class="computed">${f4(ex[2].yhat)}</span>, &nbsp; $L = $ <span class="computed">${f4(ex[2].loss)}</span></div>
+            <div class="math-line" style="margin-top: 0.5rem;">Gradients:</div>
+            <div class="math-line">$\\frac{\\partial L}{\\partial w_1} = $ <span class="computed-grad">${f4(ex[2].grads.w1)}</span> &nbsp; $\\frac{\\partial L}{\\partial b_1} = $ <span class="computed-grad">${f4(ex[2].grads.b1)}</span> &nbsp; $\\frac{\\partial L}{\\partial w_2} = $ <span class="computed-grad">${f4(ex[2].grads.w2)}</span> &nbsp; $\\frac{\\partial L}{\\partial b_2} = $ <span class="computed-grad">${f4(ex[2].grads.b2)}</span></div>
+            <div class="explanation">Negative input ($x = -1.0$) gives $w_1$ a gradient with the opposite sign compared to example 1. The examples "disagree" about which direction $w_1$ should move.</div>
+        `
+    },
+    {
+        phase: 'table',
+        html: `
+            <div class="math-line"><strong class="highlight-gradient">All per-example gradients side by side:</strong></div>
+            <table class="compare-table" style="margin: 0.75rem 0;">
+                <tr><th></th><th>$\\frac{\\partial L}{\\partial w_1}$</th><th>$\\frac{\\partial L}{\\partial b_1}$</th><th>$\\frac{\\partial L}{\\partial w_2}$</th><th>$\\frac{\\partial L}{\\partial b_2}$</th><th>Loss</th></tr>
+                <tr><td>Ex 1 ($x=1.5$)</td><td>${f4(ex[0].grads.w1)}</td><td>${f4(ex[0].grads.b1)}</td><td>${f4(ex[0].grads.w2)}</td><td>${f4(ex[0].grads.b2)}</td><td>${f4(ex[0].loss)}</td></tr>
+                <tr><td>Ex 2 ($x=0.3$)</td><td>${f4(ex[1].grads.w1)}</td><td>${f4(ex[1].grads.b1)}</td><td>${f4(ex[1].grads.w2)}</td><td>${f4(ex[1].grads.b2)}</td><td>${f4(ex[1].loss)}</td></tr>
+                <tr><td>Ex 3 ($x=-1.0$)</td><td>${f4(ex[2].grads.w1)}</td><td>${f4(ex[2].grads.b1)}</td><td>${f4(ex[2].grads.w2)}</td><td>${f4(ex[2].grads.b2)}</td><td>${f4(ex[2].loss)}</td></tr>
+            </table>
+            <div class="explanation">Each example contributes a different gradient vector — a different opinion about which direction to move the parameters. SGD resolves this by averaging.</div>
+        `
+    },
+    {
+        phase: 'average',
+        html: `
+            <div class="math-line"><strong class="highlight-gradient">Average the gradients over the mini-batch ($B = 3$):</strong></div>
+            <div class="math-line">$\\overline{\\nabla L}_{w_1} = \\frac{1}{3}\\left(${f4(ex[0].grads.w1)} + ${f4(ex[1].grads.w1)} + (${f4(ex[2].grads.w1)})\\right) = $ <span class="computed-grad">${f4(avgGrads.w1)}</span></div>
+            <div class="math-line">$\\overline{\\nabla L}_{b_1} = \\frac{1}{3}\\left(${f4(ex[0].grads.b1)} + ${f4(ex[1].grads.b1)} + (${f4(ex[2].grads.b1)})\\right) = $ <span class="computed-grad">${f4(avgGrads.b1)}</span></div>
+            <div class="math-line">$\\overline{\\nabla L}_{w_2} = \\frac{1}{3}\\left(${f4(ex[0].grads.w2)} + ${f4(ex[1].grads.w2)} + (${f4(ex[2].grads.w2)})\\right) = $ <span class="computed-grad">${f4(avgGrads.w2)}</span></div>
+            <div class="math-line">$\\overline{\\nabla L}_{b_2} = \\frac{1}{3}\\left(${f4(ex[0].grads.b2)} + ${f4(ex[1].grads.b2)} + (${f4(ex[2].grads.b2)})\\right) = $ <span class="computed-grad">${f4(avgGrads.b2)}</span></div>
+            <div class="explanation">The averaged gradient is a compromise between the three examples. Where they agree, the signal reinforces. Where they disagree ($w_1$: positive from ex 1 vs. negative from ex 3), the signals partially cancel, resulting in a smaller update.</div>
+        `
+    },
+    {
+        phase: 'update',
+        html: `
+            <div class="math-line"><strong class="highlight-update">Apply the update: $w \\leftarrow w - \\eta \\cdot \\overline{\\nabla L}$ &nbsp;&nbsp; with $\\eta = ${lr}$</strong></div>
+            <table class="compare-table" style="margin: 0.75rem 0;">
+                <tr><th>Parameter</th><th>Old value</th><th>$-\\eta \\cdot \\overline{\\nabla L}$</th><th>New value</th></tr>
+                <tr><td style="text-align:left">$w_1$</td><td>${f4(initParams.w1)}</td><td>${f4(-lr * avgGrads.w1)}</td><td><span class="computed-update">${f4(newParams.w1)}</span></td></tr>
+                <tr><td style="text-align:left">$b_1$</td><td>${f4(initParams.b1)}</td><td>${f4(-lr * avgGrads.b1)}</td><td><span class="computed-update">${f4(newParams.b1)}</span></td></tr>
+                <tr><td style="text-align:left">$w_2$</td><td>${f4(initParams.w2)}</td><td>${f4(-lr * avgGrads.w2)}</td><td><span class="computed-update">${f4(newParams.w2)}</span></td></tr>
+                <tr><td style="text-align:left">$b_2$</td><td>${f4(initParams.b2)}</td><td>${f4(-lr * avgGrads.b2)}</td><td><span class="computed-update">${f4(newParams.b2)}</span></td></tr>
+            </table>
+            <div class="explanation">One SGD step is complete. The parameters have been nudged in the direction that (on average across this batch) reduces the loss. The learning rate $\\eta = ${lr}$ scales how big the step is.</div>
+        `
+    },
+    {
+        phase: 'verify',
+        html: `
+            <div class="math-line"><strong class="highlight-update">Did it work?</strong> Re-evaluate the batch with the updated parameters:</div>
+            <table class="compare-table" style="margin: 0.75rem 0;">
+                <tr><th></th><th>Old loss</th><th>New loss</th><th>Change</th></tr>
+                <tr><td>Ex 1</td><td>${f4(ex[0].loss)}</td><td>${f4(newLosses[0])}</td><td style="color: ${newLosses[0] < ex[0].loss ? 'var(--success)' : 'var(--danger)'}">${f4(newLosses[0] - ex[0].loss)}</td></tr>
+                <tr><td>Ex 2</td><td>${f4(ex[1].loss)}</td><td>${f4(newLosses[1])}</td><td style="color: ${newLosses[1] < ex[1].loss ? 'var(--success)' : 'var(--danger)'}">${f4(newLosses[1] - ex[1].loss)}</td></tr>
+                <tr><td>Ex 3</td><td>${f4(ex[2].loss)}</td><td>${f4(newLosses[2])}</td><td style="color: ${newLosses[2] < ex[2].loss ? 'var(--success)' : 'var(--danger)'}">${f4(newLosses[2] - ex[2].loss)}</td></tr>
+                <tr style="font-weight: 600;"><td>Average</td><td>${f4(avgOldLoss)}</td><td>${f4(avgNewLoss)}</td><td style="color: ${avgNewLoss < avgOldLoss ? 'var(--success)' : 'var(--danger)'}">${f4(avgNewLoss - avgOldLoss)}</td></tr>
+            </table>
+            <div class="explanation">The average loss decreased — the step worked. Individual examples may get slightly worse (the update is a compromise), but on average the batch loss goes down. This is guaranteed for small enough $\\eta$ by the properties of gradient descent.</div>
+        `
+    },
+    {
+        phase: 'summary',
+        html: `
+            <div class="math-line"><strong>The SGD recipe — one step:</strong></div>
+            <div style="margin: 1rem 0; padding: 1rem; background: var(--surface-alt); border-radius: 6px; line-height: 2;">
+                <strong>1.</strong> Sample a random mini-batch of $B$ examples<br>
+                <strong>2.</strong> For each example: run forward pass, run backward pass (backprop), collect gradients<br>
+                <strong>3.</strong> Average the gradients: $\\overline{\\nabla L} = \\frac{1}{B} \\sum_{i=1}^{B} \\nabla L_i$<br>
+                <strong>4.</strong> Update parameters: $w \\leftarrow w - \\eta \\cdot \\overline{\\nabla L}$<br>
+                <strong>5.</strong> Repeat until convergence
+            </div>
+            <div class="explanation">One <strong>epoch</strong> = enough steps to see every example once. With 6 examples and $B = 3$, one epoch = 2 steps. Training typically runs for many epochs (tens to hundreds), with the learning rate decreasing over time.</div>
+        `
+    }
+];
+
+// ══════════════════════════════════════════════════
+// SGD Diagram
+// ══════════════════════════════════════════════════
+
+function drawSgdDiagram(step) {
+    const canvas = document.getElementById('sgd-diagram');
+    const parent = canvas.parentElement;
+    canvas.width = parent.clientWidth;
+    canvas.height = 200;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const padL = 30, padR = 30;
+    const colW = (W - padL - padR) / 5;
+
+    // Columns: [Examples] → [Per-example gradients] → [Average] → [Update] → [New params]
+    const cols = [
+        { x: padL + colW * 0.5, label: 'Examples' },
+        { x: padL + colW * 1.5, label: 'Backprop each' },
+        { x: padL + colW * 2.8, label: 'Average' },
+        { x: padL + colW * 3.8, label: 'Update rule' },
+        { x: padL + colW * 4.6, label: 'New params' },
+    ];
+
+    const rowY = [55, 95, 135];
+    const boxW = colW * 0.75, boxH = 28, boxR = 5;
+
+    // Determine what to show based on step
+    const showExamples = step >= 0;
+    const showGrad = [step >= 1, step >= 2, step >= 3];
+    const showTable = step >= 4;
+    const showAvg = step >= 5;
+    const showUpdate = step >= 6;
+    const showNew = step >= 7;
+
+    // ── Column headers ──
+    ctx.font = '500 11px "Inter"';
+    ctx.fillStyle = '#9a948e';
+    for (const c of cols) {
+        if (c === cols[4] && !showNew) continue;
+        if (c === cols[3] && !showUpdate) continue;
+        if (c === cols[2] && !showAvg) continue;
+        ctx.fillText(c.label, c.x, 22);
+    }
+
+    // ── Examples column ──
+    const exLabels = ['x=1.5, y=0.8', 'x=0.3, y=0.2', 'x=−1.0, y=0.5'];
+    for (let i = 0; i < 3; i++) {
+        const x = cols[0].x, y = rowY[i];
+        const active = (step === i + 1);
+        const done = (step > i + 1);
+        ctx.fillStyle = active ? '#e8f0f8' : (done ? '#f5f3ef' : '#f5f3ef');
+        ctx.strokeStyle = active ? '#3d6b9e' : '#d0ccc6';
+        ctx.lineWidth = active ? 2 : 1;
+        roundRect(ctx, x - boxW/2, y - boxH/2, boxW, boxH, boxR);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = active ? '#2d5080' : '#6b6560';
+        ctx.font = '10px "JetBrains Mono"';
+        ctx.fillText(exLabels[i], x, y);
+    }
+
+    // ── Per-example gradient column ──
+    for (let i = 0; i < 3; i++) {
+        if (!showGrad[i]) continue;
+        const x = cols[1].x, y = rowY[i];
+        const active = (step === i + 1);
+
+        // Arrow from example to gradient
+        ctx.strokeStyle = active ? '#7b5ea7' : '#d0ccc6';
+        ctx.lineWidth = 1.5;
+        drawArrow(ctx, cols[0].x + boxW/2 + 3, y, x - boxW/2 - 3, y);
+
+        ctx.fillStyle = active ? '#f0ebf5' : '#f5f3ef';
+        ctx.strokeStyle = active ? '#7b5ea7' : '#d0ccc6';
+        ctx.lineWidth = active ? 2 : 1;
+        roundRect(ctx, x - boxW/2, y - boxH/2, boxW, boxH, boxR);
+        ctx.fill(); ctx.stroke();
+
+        ctx.fillStyle = '#7b5ea7';
+        ctx.font = '9px "JetBrains Mono"';
+        ctx.fillText('∇L' + (i+1) + ': w₁=' + ex[i].grads.w1.toFixed(3), x, y);
+    }
+
+    // ── Average column ──
+    if (showAvg) {
+        const x = cols[2].x, y = rowY[1];
+        const active = (step === 5);
+
+        // Arrows from gradients to average
+        for (let i = 0; i < 3; i++) {
+            ctx.strokeStyle = '#d0ccc6';
+            ctx.lineWidth = 1;
+            drawArrow(ctx, cols[1].x + boxW/2 + 3, rowY[i], x - boxW/2 - 3, y + (i-1) * 6);
+        }
+
+        ctx.fillStyle = active ? '#f0ebf5' : '#f5f3ef';
+        ctx.strokeStyle = active ? '#7b5ea7' : '#d0ccc6';
+        ctx.lineWidth = active ? 2 : 1;
+        const avgBoxW = boxW * 0.9;
+        roundRect(ctx, x - avgBoxW/2, y - boxH/2, avgBoxW, boxH, boxR);
+        ctx.fill(); ctx.stroke();
+
+        ctx.fillStyle = '#7b5ea7';
+        ctx.font = '600 10px "JetBrains Mono"';
+        ctx.fillText('∇̄L: w₁=' + avgGrads.w1.toFixed(3), x, y);
+    }
+
+    // ── Update column ──
+    if (showUpdate) {
+        const x = cols[3].x, y = rowY[1];
+        const active = (step === 6);
+
+        ctx.strokeStyle = '#d0ccc6';
+        ctx.lineWidth = 1;
+        const avgBoxW = boxW * 0.9;
+        drawArrow(ctx, cols[2].x + avgBoxW/2 + 3, y, x - boxW/2 - 3, y);
+
+        ctx.fillStyle = active ? '#e8f5ec' : '#f5f3ef';
+        ctx.strokeStyle = active ? '#27864a' : '#d0ccc6';
+        ctx.lineWidth = active ? 2 : 1;
+        roundRect(ctx, x - boxW/2, y - boxH/2, boxW, boxH, boxR);
+        ctx.fill(); ctx.stroke();
+
+        ctx.fillStyle = '#27864a';
+        ctx.font = '10px "JetBrains Mono"';
+        ctx.fillText('w − η·∇̄L', x, y);
+    }
+
+    // ── New params column ──
+    if (showNew) {
+        const x = cols[4].x, y = rowY[1];
+
+        ctx.strokeStyle = '#d0ccc6';
+        ctx.lineWidth = 1;
+        drawArrow(ctx, cols[3].x + boxW/2 + 3, y, x - boxW/2 - 3, y);
+
+        ctx.fillStyle = '#e8f5ec';
+        ctx.strokeStyle = '#27864a';
+        ctx.lineWidth = 2;
+        roundRect(ctx, x - boxW/2, y - boxH/2, boxW, boxH, boxR);
+        ctx.fill(); ctx.stroke();
+
+        ctx.fillStyle = '#27864a';
+        ctx.font = '600 10px "JetBrains Mono"';
+        ctx.fillText('w₁=' + newParams.w1.toFixed(3), x, y);
+    }
+}
+
+// ══════════════════════════════════════════════════
+// Stochastic demo
+// ══════════════════════════════════════════════════
+
+function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+function renderStochasticDemo() {
+    const batchSize = 3;
+    const fullGrads = dataset.map(d => forwardBackward(d.x, d.y, initParams.w1, initParams.b1, initParams.w2, initParams.b2).grads);
+    const fullAvg = { w1: 0, b1: 0, w2: 0, b2: 0 };
+    for (const g of fullGrads) for (const k of ['w1','b1','w2','b2']) fullAvg[k] += g[k];
+    for (const k of ['w1','b1','w2','b2']) fullAvg[k] /= 6;
+
+    let html = '<table class="compare-table"><tr><th>Batch</th><th>Examples</th><th>$\\overline{\\nabla L}_{w_1}$</th><th>$\\overline{\\nabla L}_{b_1}$</th><th>$\\overline{\\nabla L}_{w_2}$</th><th>$\\overline{\\nabla L}_{b_2}$</th></tr>';
+
+    for (let t = 0; t < 5; t++) {
+        const indices = shuffle([0,1,2,3,4,5]).slice(0, batchSize);
+        const batchAvg = { w1: 0, b1: 0, w2: 0, b2: 0 };
+        for (const i of indices) for (const k of ['w1','b1','w2','b2']) batchAvg[k] += fullGrads[i][k];
+        for (const k of ['w1','b1','w2','b2']) batchAvg[k] /= batchSize;
+        const exStr = indices.map(i => i + 1).sort().join(', ');
+        html += `<tr><td style="text-align:left">Random ${t+1}</td><td>{${exStr}}</td><td>${f4(batchAvg.w1)}</td><td>${f4(batchAvg.b1)}</td><td>${f4(batchAvg.w2)}</td><td>${f4(batchAvg.b2)}</td></tr>`;
+    }
+
+    html += `<tr style="font-weight:600; background: var(--accent-light);"><td style="text-align:left">Full batch</td><td>{1–6}</td><td>${f4(fullAvg.w1)}</td><td>${f4(fullAvg.b1)}</td><td>${f4(fullAvg.w2)}</td><td>${f4(fullAvg.b2)}</td></tr>`;
+    html += '</table>';
+
+    document.getElementById('stochastic-table').innerHTML = html;
+    renderMathInElement(document.getElementById('stochastic-table'), {
+        delimiters: [{left: '$', right: '$', display: false}],
+        throwOnError: false
+    });
+}
+
+document.getElementById('stochastic-resample').addEventListener('click', renderStochasticDemo);
+
+// ══════════════════════════════════════════════════
+// Epoch runner
+// ══════════════════════════════════════════════════
+
+document.getElementById('ep-lr').addEventListener('input', e => {
+    document.getElementById('ep-lr-val').textContent = parseFloat(e.target.value).toFixed(1);
+});
+
+document.getElementById('ep-reset2').addEventListener('click', () => {
+    document.getElementById('ep-log').innerHTML = '<span class="log-dim">Press "Run 5 epochs" to start training.</span>';
+});
+
+document.getElementById('ep-run').addEventListener('click', () => {
+    const eta = parseFloat(document.getElementById('ep-lr').value);
+    const bs = parseInt(document.getElementById('ep-bs').value);
+    const logEl = document.getElementById('ep-log');
+
+    let p = { ...initParams };
+    let html = '';
+
+    for (let epoch = 1; epoch <= 5; epoch++) {
+        const order = shuffle([0,1,2,3,4,5]);
+        let epochLoss = 0;
+
+        html += `<span class="log-epoch">Epoch ${epoch}</span>`;
+
+        for (let batchStart = 0; batchStart < 6; batchStart += bs) {
+            const batchIdx = order.slice(batchStart, batchStart + bs);
+            const batchGrads = { w1: 0, b1: 0, w2: 0, b2: 0 };
+            let batchLoss = 0;
+
+            for (const idx of batchIdx) {
+                const r = forwardBackward(dataset[idx].x, dataset[idx].y, p.w1, p.b1, p.w2, p.b2);
+                for (const k of ['w1','b1','w2','b2']) batchGrads[k] += r.grads[k];
+                batchLoss += r.loss;
+            }
+
+            for (const k of ['w1','b1','w2','b2']) batchGrads[k] /= batchIdx.length;
+            batchLoss /= batchIdx.length;
+            epochLoss += batchLoss;
+
+            const exStr = batchIdx.map(i => i+1).sort().join(',');
+            html += `<br><span class="log-dim">  batch {${exStr}}</span> `;
+            html += `<span class="log-loss">loss=${batchLoss.toFixed(4)}</span> `;
+            html += `<span class="log-grad">∇w₁=${batchGrads.w1 >= 0 ? '+' : ''}${batchGrads.w1.toFixed(4)}</span> `;
+
+            // Update
+            for (const k of ['w1','b1','w2','b2']) {
+                p[k] = p[k] - eta * batchGrads[k];
+            }
+            html += `<span class="log-update">→ w₁=${p.w1.toFixed(4)}</span>`;
+        }
+
+        const nBatches = Math.ceil(6 / bs);
+        epochLoss /= nBatches;
+        html += `<br><span class="log-dim">  avg epoch loss:</span> <span class="log-loss"><strong>${epochLoss.toFixed(4)}</strong></span>`;
+        html += `<br><span class="log-dim">  params: w₁=${p.w1.toFixed(3)} b₁=${p.b1.toFixed(3)} w₂=${p.w2.toFixed(3)} b₂=${p.b2.toFixed(3)}</span>`;
+        html += '<br>';
+    }
+
+    // Final evaluation
+    let finalLoss = 0;
+    for (const d of dataset) finalLoss += forwardBackward(d.x, d.y, p.w1, p.b1, p.w2, p.b2).loss;
+    finalLoss /= 6;
+    html += `<br><span class="log-epoch">Final loss (all 6 examples): ${finalLoss.toFixed(4)}</span>`;
+    html += `<br><span class="log-epoch">Final params: w₁=${p.w1.toFixed(4)} b₁=${p.b1.toFixed(4)} w₂=${p.w2.toFixed(4)} b₂=${p.b2.toFixed(4)}</span>`;
+
+    logEl.innerHTML = html;
+});
+
+// ══════════════════════════════════════════════════
+// Drawing helpers
+// ══════════════════════════════════════════════════
+
+function drawArrow(ctx, x1, y1, x2, y2) {
+    const headLen = 5;
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - headLen * Math.cos(angle - 0.4), y2 - headLen * Math.sin(angle - 0.4));
+    ctx.lineTo(x2 - headLen * Math.cos(angle + 0.4), y2 - headLen * Math.sin(angle + 0.4));
+    ctx.closePath();
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.fill();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
+// ══════════════════════════════════════════════════
+// Stepper
+// ══════════════════════════════════════════════════
+
+function createStepper(steps, prevId, nextId, resetId, labelId, bodyId, drawFn) {
+    let current = 0;
+    const body = document.getElementById(bodyId);
+    const prevBtn = document.getElementById(prevId);
+    const nextBtn = document.getElementById(nextId);
+    const resetBtn = document.getElementById(resetId);
+    const label = document.getElementById(labelId);
+
+    function render() {
+        body.innerHTML = steps[current].html;
+        label.textContent = `Step ${current + 1} / ${steps.length}`;
+        prevBtn.disabled = current === 0;
+        nextBtn.disabled = current === steps.length - 1;
+        renderMathInElement(body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });
+        if (drawFn) drawFn(current);
+    }
+
+    prevBtn.addEventListener('click', () => { if (current > 0) { current--; render(); } });
+    nextBtn.addEventListener('click', () => { if (current < steps.length - 1) { current++; render(); } });
+    resetBtn.addEventListener('click', () => { current = 0; render(); });
+    render();
+}
+
+// ══════════════════════════════════════════════════
+// Init
+// ══════════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderMathInElement(document.body, {
+        delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false
+    });
+
+    createStepper(sgdSteps, 'sgd-prev', 'sgd-next', 'sgd-reset', 'sgd-step-label', 'sgd-step-body', drawSgdDiagram);
+    renderStochasticDemo();
+});
+</script>
+
+</body>
+</html>

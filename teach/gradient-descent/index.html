@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gradient Descent — Interactive Learning</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg: #fafaf8;
+    --surface: #ffffff;
+    --surface-alt: #f5f3ef;
+    --border: #e2ddd5;
+    --text: #2c2825;
+    --text-secondary: #6b6560;
+    --text-tertiary: #9a948e;
+    --accent: #3d6b9e;
+    --accent-light: #e8f0f8;
+    --primary: #3d6b9e;
+    --primary-stroke: #2d5080;
+    --success: #27864a;
+    --success-stroke: #176030;
+    --danger: #c0392b;
+    --danger-stroke: #a02920;
+    --warning: #b87a1a;
+    --warning-stroke: #986010;
+    --purple: #7b5ea7;
+    --purple-stroke: #5b3e87;
+    --teal: #1a7a7a;
+    --teal-stroke: #0a5a5a;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+}
+
+h1, h2, h3 { font-family: 'Source Serif 4', serif; font-weight: 600; }
+code, .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.9em; }
+
+.container { max-width: 1280px; margin: 0 auto; padding: 2rem 3rem; }
+
+header { margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1.5rem; }
+header h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+header p { color: var(--text-secondary); font-size: 1.05rem; }
+
+.tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 2rem; overflow-x: auto; }
+.tab {
+    padding: 0.75rem 1.25rem; cursor: pointer; border: none; background: none;
+    font-family: 'Inter', sans-serif; font-size: 0.95rem; font-weight: 500;
+    color: var(--text-secondary); border-bottom: 2px solid transparent;
+    margin-bottom: -2px; white-space: nowrap; transition: color 0.15s, border-color 0.15s;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.section { display: none; }
+.section.active { display: block; }
+
+.section-content {
+    display: grid; grid-template-columns: 340px 1fr; gap: 2rem; align-items: start;
+}
+
+.explanation {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.5rem;
+}
+.explanation h2 { font-size: 1.3rem; margin-bottom: 0.75rem; }
+.explanation p { margin-bottom: 0.75rem; font-size: 0.95rem; }
+
+.controls { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+
+.control-group label {
+    display: block; font-size: 0.85rem; font-weight: 500;
+    color: var(--text-secondary); margin-bottom: 0.25rem;
+}
+.control-group select, .control-group input[type="text"] {
+    width: 100%; padding: 0.4rem 0.6rem; border: 1px solid var(--border);
+    border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 0.9rem; background: var(--surface);
+}
+.control-row {
+    display: flex; align-items: center; gap: 0.5rem;
+}
+.control-row input[type="range"] { flex: 1; }
+.control-row .val { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; min-width: 3.5em; text-align: right; }
+
+.btn {
+    display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem;
+    border: 1px solid var(--border); border-radius: 6px; background: var(--surface);
+    font-family: 'Inter', sans-serif; font-size: 0.85rem; font-weight: 500;
+    cursor: pointer; color: var(--text); transition: background 0.15s, border-color 0.15s;
+}
+.btn:hover { background: var(--surface-alt); border-color: var(--text-tertiary); }
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--primary-stroke); }
+.btn.primary:hover { background: var(--primary-stroke); }
+.btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.state-display {
+    background: var(--surface-alt); border-radius: 6px; padding: 0.75rem 1rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; line-height: 1.7;
+}
+.state-display .label { color: var(--text-tertiary); font-size: 0.8rem; }
+
+.hint {
+    background: var(--accent-light); border-left: 3px solid var(--accent);
+    padding: 0.75rem 1rem; margin-top: 1rem; font-size: 0.88rem;
+    color: var(--text-secondary); border-radius: 0 6px 6px 0;
+}
+.hint::before { content: "What to notice: "; font-weight: 600; color: var(--accent); }
+
+.viz-area {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.5rem; min-height: 500px; position: relative;
+}
+.viz-area canvas { display: block; }
+
+#three-container { min-height: 500px; position: relative; }
+#three-container canvas { border-radius: 6px; }
+
+.legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.75rem; font-size: 0.85rem; }
+.legend-item { display: flex; align-items: center; gap: 0.35rem; }
+.legend-swatch {
+    width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.15);
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>Gradient Descent</h1>
+        <p>Explore loss landscapes, learning rates, momentum, and optimizer behaviour interactively</p>
+    </header>
+
+    <div class="tabs">
+        <button class="tab active" data-tab="landscape">3D Loss Landscape</button>
+        <button class="tab" data-tab="lr">Learning Rate</button>
+        <button class="tab" data-tab="momentum">Momentum</button>
+        <button class="tab" data-tab="race">Optimizer Race</button>
+    </div>
+
+    <!-- ===== TAB 1: 3D LOSS LANDSCAPE ===== -->
+    <div class="section active" id="sec-landscape">
+        <div class="section-content">
+            <div class="explanation">
+                <h2>3D Loss Landscape</h2>
+                <p>The loss function defines a surface over parameter space. SGD finds a minimum by following the negative gradient — stepping downhill.</p>
+                <p>Rotate the landscape with your mouse. Adjust the learning rate and watch how it affects the descent path.</p>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Learning rate $\eta$</label>
+                        <div class="control-row">
+                            <input type="range" id="ls-lr" min="0.01" max="0.5" step="0.01" value="0.12">
+                            <span class="val" id="ls-lr-val">0.12</span>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>Start position</label>
+                        <select id="ls-start">
+                            <option value="3.5,3.5">(3.5, 3.5) — far corner</option>
+                            <option value="-3,2">(-3, 2) — opposite side</option>
+                            <option value="2,-3">(2, -3) — another corner</option>
+                        </select>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn primary" id="ls-run">Run SGD</button>
+                        <button class="btn" id="ls-reset">Reset</button>
+                    </div>
+                </div>
+                <div class="state-display" id="ls-state">
+                    <div><span class="label">position:</span> (3.50, 3.50)</div>
+                    <div><span class="label">loss:</span> —</div>
+                    <div><span class="label">step:</span> 0</div>
+                    <div><span class="label">|∇L|:</span> —</div>
+                </div>
+                <div class="hint">With a small learning rate, the ball descends smoothly. Too large and it overshoots, bouncing around or even diverging upward.</div>
+            </div>
+            <div class="viz-area" id="three-container"></div>
+        </div>
+    </div>
+
+    <!-- ===== TAB 2: LEARNING RATE ===== -->
+    <div class="section" id="sec-lr">
+        <div class="section-content">
+            <div class="explanation">
+                <h2>Learning Rate</h2>
+                <p>Three SGD runs start from the same point on a simple bowl $L = x^2 + y^2$. Each uses a different learning rate.</p>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>$\eta_1$ (slow) <span style="color:var(--primary)">blue</span></label>
+                        <div class="control-row">
+                            <input type="range" id="lr1" min="0.001" max="0.2" step="0.001" value="0.01">
+                            <span class="val" id="lr1-val">0.010</span>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>$\eta_2$ (good) <span style="color:var(--success)">green</span></label>
+                        <div class="control-row">
+                            <input type="range" id="lr2" min="0.01" max="0.5" step="0.01" value="0.10">
+                            <span class="val" id="lr2-val">0.100</span>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>$\eta_3$ (aggressive) <span style="color:var(--danger)">red</span></label>
+                        <div class="control-row">
+                            <input type="range" id="lr3" min="0.1" max="1.2" step="0.01" value="0.90">
+                            <span class="val" id="lr3-val">0.900</span>
+                        </div>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn primary" id="lr-run">Run</button>
+                        <button class="btn" id="lr-reset">Reset</button>
+                    </div>
+                </div>
+                <div class="state-display" id="lr-state">
+                    <div><span class="label">step:</span> 0</div>
+                    <div style="color:var(--primary)"><span class="label">blue loss:</span> —</div>
+                    <div style="color:var(--success)"><span class="label">green loss:</span> —</div>
+                    <div style="color:var(--danger)"><span class="label">red loss:</span> —</div>
+                </div>
+                <div class="hint">The "just right" learning rate (green) converges smoothly. Too small (blue) barely moves. Too large (red) oscillates or diverges. There's a Goldilocks zone.</div>
+            </div>
+            <div class="viz-area"><canvas id="lr-canvas"></canvas></div>
+        </div>
+    </div>
+
+    <!-- ===== TAB 3: MOMENTUM ===== -->
+    <div class="section" id="sec-momentum">
+        <div class="section-content">
+            <div class="explanation">
+                <h2>Momentum</h2>
+                <p>A narrow ravine $L = 0.05x^2 + y^2$ where the loss changes slowly along $x$ but steeply across $y$. Plain SGD oscillates across the ravine; momentum smooths this out.</p>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Learning rate $\eta$</label>
+                        <div class="control-row">
+                            <input type="range" id="mom-lr" min="0.01" max="0.3" step="0.01" value="0.10">
+                            <span class="val" id="mom-lr-val">0.10</span>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>Momentum $\beta$</label>
+                        <div class="control-row">
+                            <input type="range" id="mom-beta" min="0" max="0.99" step="0.01" value="0.90">
+                            <span class="val" id="mom-beta-val">0.90</span>
+                        </div>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn primary" id="mom-run">Run</button>
+                        <button class="btn" id="mom-reset">Reset</button>
+                    </div>
+                </div>
+                <div class="state-display" id="mom-state">
+                    <div><span class="label">step:</span> 0</div>
+                    <div style="color:var(--danger)"><span class="label">SGD loss:</span> —</div>
+                    <div style="color:var(--primary)"><span class="label">Momentum loss:</span> —</div>
+                </div>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-swatch" style="background:var(--danger)"></div> Plain SGD</div>
+                    <div class="legend-item"><div class="legend-swatch" style="background:var(--primary)"></div> SGD + Momentum</div>
+                </div>
+                <div class="hint">Momentum accumulates velocity in consistent directions (along the ravine) and dampens oscillations (across it). Like a heavy ball that builds speed downhill.</div>
+            </div>
+            <div class="viz-area"><canvas id="mom-canvas"></canvas></div>
+        </div>
+    </div>
+
+    <!-- ===== TAB 4: OPTIMIZER RACE ===== -->
+    <div class="section" id="sec-race">
+        <div class="section-content">
+            <div class="explanation">
+                <h2>Optimizer Race</h2>
+                <p>A curved valley (Rosenbrock-like): $L = (1-x)^2 + 5(y-x^2)^2$. The minimum is at $(1, 1)$ inside a narrow banana-shaped valley. Watch how different optimizers navigate it.</p>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Learning rate (shared)</label>
+                        <div class="control-row">
+                            <input type="range" id="race-lr" min="0.001" max="0.05" step="0.001" value="0.008">
+                            <span class="val" id="race-lr-val">0.008</span>
+                        </div>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn primary" id="race-run">Run</button>
+                        <button class="btn" id="race-reset">Reset</button>
+                    </div>
+                </div>
+                <div class="state-display" id="race-state">
+                    <div><span class="label">step:</span> 0</div>
+                    <div style="color:var(--danger)"><span class="label">SGD:</span> —</div>
+                    <div style="color:var(--primary)"><span class="label">Momentum:</span> —</div>
+                    <div style="color:var(--success)"><span class="label">Adam:</span> —</div>
+                </div>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-swatch" style="background:var(--danger)"></div> SGD</div>
+                    <div class="legend-item"><div class="legend-swatch" style="background:var(--primary)"></div> SGD + Momentum</div>
+                    <div class="legend-item"><div class="legend-swatch" style="background:var(--success)"></div> Adam</div>
+                </div>
+                <div class="hint">Adam adapts the step size per parameter using gradient history, letting it navigate the curved valley efficiently. SGD wanders; momentum helps but overshoots on curves.</div>
+            </div>
+            <div class="viz-area"><canvas id="race-canvas"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<!-- External libraries -->
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script>
+renderMathInElement(document.body, {
+    delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+    ]
+});
+</script>
+
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+    }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+// ===== TAB NAVIGATION =====
+const tabs = document.querySelectorAll('.tab');
+const sections = document.querySelectorAll('.section');
+let activeTab = 'landscape';
+
+tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        sections.forEach(s => s.classList.remove('active'));
+        tab.classList.add('active');
+        const id = tab.dataset.tab;
+        document.getElementById('sec-' + id).classList.add('active');
+        activeTab = id;
+        if (id === 'landscape') { startThreeLoop(); resizeThree(); }
+        else { stopThreeLoop(); }
+        if (id === 'lr') drawLR();
+        if (id === 'momentum') drawMomentum();
+        if (id === 'race') drawRace();
+    });
+});
+
+// ===== COLOR UTILITIES =====
+function viridis(t) {
+    t = Math.max(0, Math.min(1, t));
+    const palette = [
+        [26, 122, 122],
+        [39, 107, 158],
+        [39, 134, 74],
+        [184, 122, 26],
+        [192, 57, 43],
+    ];
+    const idx = t * (palette.length - 1);
+    const i = Math.min(Math.floor(idx), palette.length - 2);
+    const f = idx - i;
+    return [
+        Math.round(palette[i][0] + (palette[i+1][0] - palette[i][0]) * f),
+        Math.round(palette[i][1] + (palette[i+1][1] - palette[i][1]) * f),
+        Math.round(palette[i][2] + (palette[i+1][2] - palette[i][2]) * f),
+    ];
+}
+
+function viridisHex(t) {
+    const [r,g,b] = viridis(t);
+    return `rgb(${r},${g},${b})`;
+}
+
+// ===== LOSS FUNCTIONS =====
+// 3D landscape: bowl with wavy texture
+function loss3D(x, z) {
+    return 0.15 * (x*x + z*z) - 0.5 * Math.cos(1.5*x) * Math.cos(1.5*z) + 3;
+}
+function grad3D(x, z) {
+    return {
+        dx: 0.3*x + 0.75*Math.sin(1.5*x)*Math.cos(1.5*z),
+        dz: 0.3*z + 0.75*Math.cos(1.5*x)*Math.sin(1.5*z)
+    };
+}
+
+// Simple bowl
+function lossBowl(x, y) { return x*x + y*y; }
+function gradBowl(x, y) { return { dx: 2*x, dy: 2*y }; }
+
+// Elongated ravine
+function lossRavine(x, y) { return 0.05*x*x + y*y; }
+function gradRavine(x, y) { return { dx: 0.1*x, dy: 2*y }; }
+
+// Rosenbrock-like
+function lossRosen(x, y) { return (1-x)*(1-x) + 5*(y - x*x)*(y - x*x); }
+function gradRosen(x, y) {
+    return {
+        dx: 2*(x-1) - 20*x*(y - x*x),
+        dy: 10*(y - x*x)
+    };
+}
+
+// ===== OPTIMIZER IMPLEMENTATIONS =====
+function sgdStep(pos, lr, gradFn) {
+    const g = gradFn(pos.x, pos.y);
+    return { x: pos.x - lr * g.dx, y: pos.y - lr * g.dy };
+}
+
+function momentumStep(pos, vel, lr, beta, gradFn) {
+    const g = gradFn(pos.x, pos.y);
+    const nvx = beta * vel.vx + g.dx;
+    const nvy = beta * vel.vy + g.dy;
+    return {
+        pos: { x: pos.x - lr * nvx, y: pos.y - lr * nvy },
+        vel: { vx: nvx, vy: nvy }
+    };
+}
+
+function adamStep(pos, state, lr, gradFn) {
+    const g = gradFn(pos.x, pos.y);
+    const b1 = 0.9, b2 = 0.999, eps = 1e-8;
+    state.t++;
+    state.mx = b1 * state.mx + (1-b1) * g.dx;
+    state.my = b1 * state.my + (1-b1) * g.dy;
+    state.vx = b2 * state.vx + (1-b2) * g.dx * g.dx;
+    state.vy = b2 * state.vy + (1-b2) * g.dy * g.dy;
+    const mxh = state.mx / (1 - Math.pow(b1, state.t));
+    const myh = state.my / (1 - Math.pow(b1, state.t));
+    const vxh = state.vx / (1 - Math.pow(b2, state.t));
+    const vyh = state.vy / (1 - Math.pow(b2, state.t));
+    return {
+        x: pos.x - lr * mxh / (Math.sqrt(vxh) + eps),
+        y: pos.y - lr * myh / (Math.sqrt(vyh) + eps)
+    };
+}
+
+// ===== 2D HEATMAP UTILITIES =====
+function setupCanvas(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    const dpr = window.devicePixelRatio || 1;
+    // Collapse canvas before measuring parent to avoid feedback loop
+    canvas.style.width = '0px';
+    canvas.style.height = '0px';
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const w = Math.floor(rect.width - 48);
+    const h = Math.floor(Math.max(460, w));  // square-ish, based on width
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    return { ctx, w, h, canvas };
+}
+
+function drawHeatmap(ctx, w, h, lossFn, domain, maxVal) {
+    const imgData = ctx.createImageData(w, h);
+    const minVal = 0;
+    // Pre-compute loss grid for contour detection
+    const grid = new Float64Array(w * h);
+    for (let py = 0; py < h; py++) {
+        for (let px = 0; px < w; px++) {
+            const x = domain.xMin + (px / w) * (domain.xMax - domain.xMin);
+            const y = domain.yMax - (py / h) * (domain.yMax - domain.yMin);
+            grid[py * w + px] = lossFn(x, y);
+        }
+    }
+    // Contour levels
+    const levels = [];
+    for (let v = 0.5; v < maxVal; v *= 1.6) levels.push(v);
+
+    for (let py = 0; py < h; py++) {
+        for (let px = 0; px < w; px++) {
+            const val = grid[py * w + px];
+            const t = Math.sqrt(Math.max(0, Math.min(1, (val - minVal) / (maxVal - minVal))));
+            let [r, g, b] = viridis(t);
+
+            // Darken at contour crossings
+            if (px < w - 1 && py < h - 1) {
+                const vr = grid[py * w + px + 1];
+                const vb = grid[(py+1) * w + px];
+                for (const lv of levels) {
+                    if ((val < lv && vr >= lv) || (val >= lv && vr < lv) ||
+                        (val < lv && vb >= lv) || (val >= lv && vb < lv)) {
+                        r = Math.round(r * 0.55);
+                        g = Math.round(g * 0.55);
+                        b = Math.round(b * 0.55);
+                        break;
+                    }
+                }
+            }
+            const idx = (py * w + px) * 4;
+            imgData.data[idx] = r;
+            imgData.data[idx+1] = g;
+            imgData.data[idx+2] = b;
+            imgData.data[idx+3] = 255;
+        }
+    }
+    ctx.putImageData(imgData, 0, 0);
+}
+
+function worldToCanvas(x, y, w, h, domain) {
+    return {
+        cx: (x - domain.xMin) / (domain.xMax - domain.xMin) * w,
+        cy: (1 - (y - domain.yMin) / (domain.yMax - domain.yMin)) * h
+    };
+}
+
+function drawTrajectory(ctx, trail, w, h, domain, color, radius) {
+    if (trail.length === 0) return;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    const p0 = worldToCanvas(trail[0].x, trail[0].y, w, h, domain);
+    ctx.moveTo(p0.cx, p0.cy);
+    for (let i = 1; i < trail.length; i++) {
+        const p = worldToCanvas(trail[i].x, trail[i].y, w, h, domain);
+        ctx.lineTo(p.cx, p.cy);
+    }
+    ctx.stroke();
+
+    // Draw current position
+    const last = trail[trail.length - 1];
+    const pl = worldToCanvas(last.x, last.y, w, h, domain);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(pl.cx, pl.cy, radius || 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+}
+
+function drawStartMarker(ctx, x, y, w, h, domain) {
+    const p = worldToCanvas(x, y, w, h, domain);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(p.cx, p.cy, 7, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fill();
+}
+
+function drawMinMarker(ctx, x, y, w, h, domain, label) {
+    const p = worldToCanvas(x, y, w, h, domain);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.arc(p.cx, p.cy, 8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (label) {
+        ctx.fillStyle = '#fff';
+        ctx.font = "500 11px 'Inter', sans-serif";
+        ctx.textAlign = 'center';
+        ctx.fillText(label, p.cx, p.cy - 13);
+    }
+}
+
+// ===== TAB 1: THREE.JS 3D LANDSCAPE =====
+let threeScene, threeCamera, threeRenderer, threeControls;
+let threeBall, threeTrailLine, threeTrailPositions, threeTrailCount;
+let threeAnimId = null;
+let lsRunning = false, lsTimer = null;
+let lsPos = { x: 3.5, z: 3.5 };
+let lsStep = 0;
+const HS = 0.5; // height scale
+const DOMAIN3D = 4;
+const LOSS3D_MIN = 2.5;
+const LOSS3D_MAX = 8;
+
+function initThree() {
+    const container = document.getElementById('three-container');
+    const w = container.clientWidth;
+    const h = Math.max(500, container.clientHeight);
+
+    // Scene
+    threeScene = new THREE.Scene();
+    threeScene.background = new THREE.Color(0xfafaf8);
+
+    // Camera
+    threeCamera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+    threeCamera.position.set(7, 5, 7);
+    threeCamera.lookAt(0, 1, 0);
+
+    // Renderer
+    threeRenderer = new THREE.WebGLRenderer({ antialias: true });
+    threeRenderer.setSize(w, h);
+    threeRenderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(threeRenderer.domElement);
+
+    // Controls
+    threeControls = new OrbitControls(threeCamera, threeRenderer.domElement);
+    threeControls.target.set(0, 1, 0);
+    threeControls.enableDamping = true;
+    threeControls.dampingFactor = 0.1;
+    threeControls.update();
+
+    // Lighting
+    threeScene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    dirLight.position.set(5, 10, 5);
+    threeScene.add(dirLight);
+    const hemiLight = new THREE.HemisphereLight(0xddeeff, 0x886644, 0.25);
+    threeScene.add(hemiLight);
+
+    // Surface mesh
+    const N = 100;
+    const geom = new THREE.PlaneGeometry(DOMAIN3D * 2, DOMAIN3D * 2, N, N);
+    geom.rotateX(-Math.PI / 2);
+    const pos = geom.attributes.position;
+    const colors = new Float32Array(pos.count * 3);
+    for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const z = pos.getZ(i);
+        const lv = loss3D(x, z);
+        pos.setY(i, lv * HS);
+        const t = Math.max(0, Math.min(1, (lv - LOSS3D_MIN) / (LOSS3D_MAX - LOSS3D_MIN)));
+        const [r, g, b] = viridis(t);
+        colors[i*3] = r/255; colors[i*3+1] = g/255; colors[i*3+2] = b/255;
+    }
+    geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geom.computeVertexNormals();
+    const mat = new THREE.MeshPhongMaterial({
+        vertexColors: true, side: THREE.DoubleSide, shininess: 40, flatShading: false,
+        transparent: true, opacity: 0.75, depthWrite: false
+    });
+    threeScene.add(new THREE.Mesh(geom, mat));
+
+    // Ground grid
+    const gridHelper = new THREE.GridHelper(DOMAIN3D * 2, 16, 0xe2ddd5, 0xe2ddd5);
+    gridHelper.position.y = LOSS3D_MIN * HS - 0.01;
+    threeScene.add(gridHelper);
+
+    // Ball
+    const ballGeom = new THREE.SphereGeometry(0.12, 20, 20);
+    const ballMat = new THREE.MeshPhongMaterial({ color: 0xc0392b, shininess: 80 });
+    threeBall = new THREE.Mesh(ballGeom, ballMat);
+    updateBallPos();
+    threeScene.add(threeBall);
+
+    // Trail
+    const maxPts = 2000;
+    threeTrailPositions = new Float32Array(maxPts * 3);
+    threeTrailCount = 0;
+    const trailGeom = new THREE.BufferGeometry();
+    trailGeom.setAttribute('position', new THREE.BufferAttribute(threeTrailPositions, 3));
+    trailGeom.setDrawRange(0, 0);
+    const trailMat = new THREE.LineBasicMaterial({ color: 0xc0392b });
+    threeTrailLine = new THREE.Line(trailGeom, trailMat);
+    threeScene.add(threeTrailLine);
+    addThreeTrailPoint();
+
+    startThreeLoop();
+}
+
+function updateBallPos() {
+    const y = loss3D(lsPos.x, lsPos.z) * HS + 0.12;
+    threeBall.position.set(lsPos.x, y, lsPos.z);
+}
+
+function addThreeTrailPoint() {
+    const i = threeTrailCount * 3;
+    threeTrailPositions[i] = lsPos.x;
+    threeTrailPositions[i+1] = loss3D(lsPos.x, lsPos.z) * HS + 0.05;
+    threeTrailPositions[i+2] = lsPos.z;
+    threeTrailCount++;
+    threeTrailLine.geometry.setDrawRange(0, threeTrailCount);
+    threeTrailLine.geometry.attributes.position.needsUpdate = true;
+}
+
+function startThreeLoop() {
+    if (threeAnimId) return;
+    function loop() {
+        threeAnimId = requestAnimationFrame(loop);
+        threeControls.update();
+        threeRenderer.render(threeScene, threeCamera);
+    }
+    loop();
+}
+
+function stopThreeLoop() {
+    if (threeAnimId) { cancelAnimationFrame(threeAnimId); threeAnimId = null; }
+}
+
+function resizeThree() {
+    const container = document.getElementById('three-container');
+    const w = container.clientWidth;
+    const h = Math.max(500, container.clientHeight);
+    threeCamera.aspect = w / h;
+    threeCamera.updateProjectionMatrix();
+    threeRenderer.setSize(w, h);
+}
+
+function updateLsState() {
+    const lv = loss3D(lsPos.x, lsPos.z);
+    const g = grad3D(lsPos.x, lsPos.z);
+    const gnorm = Math.sqrt(g.dx*g.dx + g.dz*g.dz);
+    document.getElementById('ls-state').innerHTML = `
+        <div><span class="label">position:</span> (${lsPos.x.toFixed(2)}, ${lsPos.z.toFixed(2)})</div>
+        <div><span class="label">loss:</span> ${lv.toFixed(4)}</div>
+        <div><span class="label">step:</span> ${lsStep}</div>
+        <div><span class="label">|∇L|:</span> ${gnorm.toFixed(4)}</div>
+    `;
+}
+
+document.getElementById('ls-lr').addEventListener('input', function() {
+    document.getElementById('ls-lr-val').textContent = parseFloat(this.value).toFixed(2);
+});
+
+document.getElementById('ls-run').addEventListener('click', () => {
+    if (lsRunning) return;
+    lsRunning = true;
+    lsTimer = setInterval(() => {
+        const lr = parseFloat(document.getElementById('ls-lr').value);
+        const g = grad3D(lsPos.x, lsPos.z);
+        lsPos.x -= lr * g.dx;
+        lsPos.z -= lr * g.dz;
+        // Clamp to domain
+        lsPos.x = Math.max(-DOMAIN3D, Math.min(DOMAIN3D, lsPos.x));
+        lsPos.z = Math.max(-DOMAIN3D, Math.min(DOMAIN3D, lsPos.z));
+        lsStep++;
+        updateBallPos();
+        addThreeTrailPoint();
+        updateLsState();
+        // Stop if converged
+        const gnorm = Math.sqrt(g.dx*g.dx + g.dz*g.dz);
+        if (gnorm < 0.005 || lsStep > 500) {
+            clearInterval(lsTimer);
+            lsRunning = false;
+        }
+    }, 60);
+});
+
+document.getElementById('ls-reset').addEventListener('click', () => {
+    if (lsTimer) clearInterval(lsTimer);
+    lsRunning = false;
+    const startStr = document.getElementById('ls-start').value;
+    const [sx, sz] = startStr.split(',').map(Number);
+    lsPos = { x: sx, z: sz };
+    lsStep = 0;
+    threeTrailCount = 0;
+    threeTrailLine.geometry.setDrawRange(0, 0);
+    updateBallPos();
+    addThreeTrailPoint();
+    updateLsState();
+});
+
+document.getElementById('ls-start').addEventListener('change', () => {
+    document.getElementById('ls-reset').click();
+});
+
+// ===== TAB 2: LEARNING RATE =====
+let lrTrails = [[], [], []];
+let lrRunning = false, lrTimer = null, lrStepCount = 0;
+const lrDomain = { xMin: -4, xMax: 4, yMin: -4, yMax: 4 };
+const lrStart = { x: -3, y: 3 };
+
+function drawLR() {
+    const { ctx, w, h } = setupCanvas('lr-canvas');
+    drawHeatmap(ctx, w, h, lossBowl, lrDomain, 20);
+    drawMinMarker(ctx, 0, 0, w, h, lrDomain, 'min');
+    drawStartMarker(ctx, lrStart.x, lrStart.y, w, h, lrDomain);
+
+    const colors = ['#3d6b9e', '#27864a', '#c0392b'];
+    lrTrails.forEach((trail, i) => {
+        if (trail.length > 0) drawTrajectory(ctx, trail, w, h, lrDomain, colors[i], 5);
+    });
+
+    if (lrTrails[0].length === 0) {
+        // Draw start markers for each
+        const p = worldToCanvas(lrStart.x, lrStart.y, w, h, lrDomain);
+        colors.forEach((c, i) => {
+            ctx.fillStyle = c;
+            ctx.beginPath();
+            ctx.arc(p.cx + (i-1)*8, p.cy, 5, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+}
+
+['lr1','lr2','lr3'].forEach(id => {
+    document.getElementById(id).addEventListener('input', function() {
+        document.getElementById(id + '-val').textContent = parseFloat(this.value).toFixed(3);
+    });
+});
+
+document.getElementById('lr-run').addEventListener('click', () => {
+    if (lrRunning) return;
+    lrRunning = true;
+    const lrs = [
+        parseFloat(document.getElementById('lr1').value),
+        parseFloat(document.getElementById('lr2').value),
+        parseFloat(document.getElementById('lr3').value),
+    ];
+    let positions = lrs.map(() => ({ ...lrStart }));
+    lrTrails = positions.map(p => [{ ...p }]);
+    lrStepCount = 0;
+
+    lrTimer = setInterval(() => {
+        lrStepCount++;
+        for (let i = 0; i < 3; i++) {
+            positions[i] = sgdStep(positions[i], lrs[i], gradBowl);
+            // Clamp
+            positions[i].x = Math.max(-10, Math.min(10, positions[i].x));
+            positions[i].y = Math.max(-10, Math.min(10, positions[i].y));
+            lrTrails[i].push({ ...positions[i] });
+        }
+        drawLR();
+        const losses = positions.map(p => lossBowl(p.x, p.y));
+        document.getElementById('lr-state').innerHTML = `
+            <div><span class="label">step:</span> ${lrStepCount}</div>
+            <div style="color:var(--primary)"><span class="label">blue loss:</span> ${losses[0].toFixed(4)}</div>
+            <div style="color:var(--success)"><span class="label">green loss:</span> ${losses[1].toFixed(4)}</div>
+            <div style="color:var(--danger)"><span class="label">red loss:</span> ${losses[2] > 1000 ? 'diverged' : losses[2].toFixed(4)}</div>
+        `;
+        if (lrStepCount > 200) { clearInterval(lrTimer); lrRunning = false; }
+    }, 50);
+});
+
+document.getElementById('lr-reset').addEventListener('click', () => {
+    if (lrTimer) clearInterval(lrTimer);
+    lrRunning = false;
+    lrTrails = [[], [], []];
+    lrStepCount = 0;
+    document.getElementById('lr-state').innerHTML = `
+        <div><span class="label">step:</span> 0</div>
+        <div style="color:var(--primary)"><span class="label">blue loss:</span> —</div>
+        <div style="color:var(--success)"><span class="label">green loss:</span> —</div>
+        <div style="color:var(--danger)"><span class="label">red loss:</span> —</div>
+    `;
+    drawLR();
+});
+
+// ===== TAB 3: MOMENTUM =====
+let momTrails = [[], []];
+let momRunning = false, momTimer = null, momStepCount = 0;
+const momDomain = { xMin: -9, xMax: 9, yMin: -3, yMax: 3 };
+const momStart = { x: 7, y: 2 };
+
+function drawMomentum() {
+    const { ctx, w, h } = setupCanvas('mom-canvas');
+    drawHeatmap(ctx, w, h, lossRavine, momDomain, 8);
+    drawMinMarker(ctx, 0, 0, w, h, momDomain, 'min');
+    drawStartMarker(ctx, momStart.x, momStart.y, w, h, momDomain);
+
+    if (momTrails[0].length > 0) drawTrajectory(ctx, momTrails[0], w, h, momDomain, '#c0392b', 5);
+    if (momTrails[1].length > 0) drawTrajectory(ctx, momTrails[1], w, h, momDomain, '#3d6b9e', 5);
+
+    if (momTrails[0].length === 0) {
+        const p = worldToCanvas(momStart.x, momStart.y, w, h, momDomain);
+        ctx.fillStyle = '#c0392b';
+        ctx.beginPath(); ctx.arc(p.cx - 5, p.cy, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#3d6b9e';
+        ctx.beginPath(); ctx.arc(p.cx + 5, p.cy, 5, 0, Math.PI * 2); ctx.fill();
+    }
+}
+
+['mom-lr', 'mom-beta'].forEach(id => {
+    document.getElementById(id).addEventListener('input', function() {
+        document.getElementById(id + '-val').textContent = parseFloat(this.value).toFixed(2);
+    });
+});
+
+document.getElementById('mom-run').addEventListener('click', () => {
+    if (momRunning) return;
+    momRunning = true;
+    const lr = parseFloat(document.getElementById('mom-lr').value);
+    const beta = parseFloat(document.getElementById('mom-beta').value);
+    let posSGD = { ...momStart };
+    let posMom = { ...momStart };
+    let vel = { vx: 0, vy: 0 };
+    momTrails = [[{ ...posSGD }], [{ ...posMom }]];
+    momStepCount = 0;
+
+    momTimer = setInterval(() => {
+        momStepCount++;
+        posSGD = sgdStep(posSGD, lr, gradRavine);
+        const mResult = momentumStep(posMom, vel, lr, beta, gradRavine);
+        posMom = mResult.pos;
+        vel = mResult.vel;
+        momTrails[0].push({ ...posSGD });
+        momTrails[1].push({ ...posMom });
+        drawMomentum();
+        document.getElementById('mom-state').innerHTML = `
+            <div><span class="label">step:</span> ${momStepCount}</div>
+            <div style="color:var(--danger)"><span class="label">SGD loss:</span> ${lossRavine(posSGD.x, posSGD.y).toFixed(4)}</div>
+            <div style="color:var(--primary)"><span class="label">Momentum loss:</span> ${lossRavine(posMom.x, posMom.y).toFixed(4)}</div>
+        `;
+        if (momStepCount > 300) { clearInterval(momTimer); momRunning = false; }
+    }, 40);
+});
+
+document.getElementById('mom-reset').addEventListener('click', () => {
+    if (momTimer) clearInterval(momTimer);
+    momRunning = false;
+    momTrails = [[], []];
+    momStepCount = 0;
+    document.getElementById('mom-state').innerHTML = `
+        <div><span class="label">step:</span> 0</div>
+        <div style="color:var(--danger)"><span class="label">SGD loss:</span> —</div>
+        <div style="color:var(--primary)"><span class="label">Momentum loss:</span> —</div>
+    `;
+    drawMomentum();
+});
+
+// ===== TAB 4: OPTIMIZER RACE =====
+let raceTrails = [[], [], []];
+let raceRunning = false, raceTimer = null, raceStepCount = 0;
+const raceDomain = { xMin: -2.5, xMax: 2.5, yMin: -1, yMax: 4 };
+const raceStart = { x: -1.5, y: 3 };
+
+function drawRace() {
+    const { ctx, w, h } = setupCanvas('race-canvas');
+    drawHeatmap(ctx, w, h, lossRosen, raceDomain, 15);
+    drawMinMarker(ctx, 1, 1, w, h, raceDomain, 'min (1,1)');
+    drawStartMarker(ctx, raceStart.x, raceStart.y, w, h, raceDomain);
+
+    const colors = ['#c0392b', '#3d6b9e', '#27864a'];
+    raceTrails.forEach((trail, i) => {
+        if (trail.length > 0) drawTrajectory(ctx, trail, w, h, raceDomain, colors[i], 5);
+    });
+
+    if (raceTrails[0].length === 0) {
+        const p = worldToCanvas(raceStart.x, raceStart.y, w, h, raceDomain);
+        colors.forEach((c, i) => {
+            ctx.fillStyle = c;
+            ctx.beginPath(); ctx.arc(p.cx + (i-1)*8, p.cy, 5, 0, Math.PI * 2); ctx.fill();
+        });
+    }
+}
+
+document.getElementById('race-lr').addEventListener('input', function() {
+    document.getElementById('race-lr-val').textContent = parseFloat(this.value).toFixed(3);
+});
+
+document.getElementById('race-run').addEventListener('click', () => {
+    if (raceRunning) return;
+    raceRunning = true;
+    const lr = parseFloat(document.getElementById('race-lr').value);
+    let posSGD = { ...raceStart };
+    let posMom = { ...raceStart };
+    let posAdam = { ...raceStart };
+    let vel = { vx: 0, vy: 0 };
+    let adamState = { mx: 0, my: 0, vx: 0, vy: 0, t: 0 };
+    raceTrails = [[{ ...posSGD }], [{ ...posMom }], [{ ...posAdam }]];
+    raceStepCount = 0;
+
+    raceTimer = setInterval(() => {
+        raceStepCount++;
+        posSGD = sgdStep(posSGD, lr, gradRosen);
+        const mResult = momentumStep(posMom, vel, lr, 0.9, gradRosen);
+        posMom = mResult.pos; vel = mResult.vel;
+        posAdam = adamStep(posAdam, adamState, lr, gradRosen);
+
+        // Clamp all
+        [posSGD, posMom, posAdam].forEach(p => {
+            p.x = Math.max(-5, Math.min(5, p.x));
+            p.y = Math.max(-5, Math.min(8, p.y));
+        });
+
+        raceTrails[0].push({ ...posSGD });
+        raceTrails[1].push({ ...posMom });
+        raceTrails[2].push({ ...posAdam });
+        drawRace();
+        const losses = [lossRosen(posSGD.x, posSGD.y), lossRosen(posMom.x, posMom.y), lossRosen(posAdam.x, posAdam.y)];
+        document.getElementById('race-state').innerHTML = `
+            <div><span class="label">step:</span> ${raceStepCount}</div>
+            <div style="color:var(--danger)"><span class="label">SGD:</span> ${losses[0] > 1000 ? 'diverged' : losses[0].toFixed(4)}</div>
+            <div style="color:var(--primary)"><span class="label">Momentum:</span> ${losses[1] > 1000 ? 'diverged' : losses[1].toFixed(4)}</div>
+            <div style="color:var(--success)"><span class="label">Adam:</span> ${losses[2] > 1000 ? 'diverged' : losses[2].toFixed(4)}</div>
+        `;
+        if (raceStepCount > 500) { clearInterval(raceTimer); raceRunning = false; }
+    }, 30);
+});
+
+document.getElementById('race-reset').addEventListener('click', () => {
+    if (raceTimer) clearInterval(raceTimer);
+    raceRunning = false;
+    raceTrails = [[], [], []];
+    raceStepCount = 0;
+    document.getElementById('race-state').innerHTML = `
+        <div><span class="label">step:</span> 0</div>
+        <div style="color:var(--danger)"><span class="label">SGD:</span> —</div>
+        <div style="color:var(--primary)"><span class="label">Momentum:</span> —</div>
+        <div style="color:var(--success)"><span class="label">Adam:</span> —</div>
+    `;
+    drawRace();
+});
+
+// ===== RESIZE =====
+window.addEventListener('resize', () => {
+    if (activeTab === 'landscape') resizeThree();
+    if (activeTab === 'lr') drawLR();
+    if (activeTab === 'momentum') drawMomentum();
+    if (activeTab === 'race') drawRace();
+});
+
+// ===== INIT =====
+initThree();
+updateLsState();
+</script>
+</body>
+</html>
