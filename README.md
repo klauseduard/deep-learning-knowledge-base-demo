@@ -6,6 +6,8 @@ A demonstration of building a structured knowledge base and interactive teaching
 
 This repository demonstrates a workflow for learning a complex technical domain with an LLM as a collaborator. The knowledge base started as AI-generated drafts seeded from François Fleuret's *The Little Book of Deep Learning* (2023), then improved through iterative review — the learner reads the articles, asks questions about what's unclear or missing, and the material gets refined or expanded in response. Interactive teaching materials emerged from this process: each one was prompted by a genuine question ("I forgot the math — show me with real numbers", "what happens when I stack 20 sigmoid layers?") rather than planned upfront.
 
+The full knowledge base has ~95 concept articles, but most content has been removed from this public repository. A knowledge base built this way is inherently personal — shaped by one learner's questions, gaps, and interests — and publishing it as a reference would misrepresent its purpose. What remains here is enough to demonstrate the *approach*: the article format, the teaching materials, and how they connect.
+
 The result combines:
 
 - **Concept articles** — structured markdown files covering deep learning topics, interlinked with wiki-style `[[references]]`
@@ -13,8 +15,6 @@ The result combines:
 - **Reference materials** — glossary, notation guide, timeline, and key people for quick lookup
 
 ## Demo scope
-
-Most of the full knowledge base content has been removed from this public repository. A knowledge base built this way is inherently personal — shaped by one learner's questions, gaps, and interests — and publishing it as a reference would misrepresent its purpose. What remains here is enough to demonstrate the *approach*: the article format, the teaching materials, and how they connect.
 
 **5 fully developed concept articles** demonstrate the article format and editorial approach:
 
