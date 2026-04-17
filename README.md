@@ -28,25 +28,25 @@ The remaining ~90 concept articles are **stubs** — they retain their title, ta
 
 ## Interactive teaching materials
 
-Each material is a self-contained HTML file — no build step, no server, just open in a browser.
+Each material is a self-contained HTML file — no build step, no server. Try them live via GitHub Pages or clone the repo and open locally.
 
 ### Backpropagation
-- **[The Math of Backpropagation](teach/backpropagation/index.html)** — partial derivatives refresher, chain rule with numbers, full forward/backward pass by hand, how autograd works. Includes synced network diagrams that highlight the active computation at each step.
-- **[Vanishing & Exploding Gradients](teach/backpropagation/vanishing-gradients.html)** — simulation with controls for depth (2-50 layers), activation function, initialization scheme, skip connections, and layer normalization. Watch gradient magnitudes respond in real time.
+- **[The Math of Backpropagation](https://klauseduard.github.io/deep-learning-knowledge-base-demo/teach/backpropagation/index.html)** — partial derivatives refresher, chain rule with numbers, full forward/backward pass by hand, how autograd works. Includes synced network diagrams that highlight the active computation at each step.
+- **[Vanishing & Exploding Gradients](https://klauseduard.github.io/deep-learning-knowledge-base-demo/teach/backpropagation/vanishing-gradients.html)** — simulation with controls for depth (2-50 layers), activation function, initialization scheme, skip connections, and layer normalization. Watch gradient magnitudes respond in real time.
 
 ### Gradient Descent
-- **[SGD by the Numbers](teach/gradient-descent/sgd-math.html)** — worked mini-batch example: per-example gradients, averaging, parameter update, plus a multi-epoch training runner with adjustable learning rate and batch size.
-- **[Gradient Descent — Interactive Learning](teach/gradient-descent/index.html)** — 3D loss landscape exploration, learning rate comparison, momentum visualization, optimizer race (SGD vs Adam).
+- **[SGD by the Numbers](https://klauseduard.github.io/deep-learning-knowledge-base-demo/teach/gradient-descent/sgd-math.html)** — worked mini-batch example: per-example gradients, averaging, parameter update, plus a multi-epoch training runner with adjustable learning rate and batch size.
+- **[Gradient Descent — Interactive Learning](https://klauseduard.github.io/deep-learning-knowledge-base-demo/teach/gradient-descent/index.html)** — 3D loss landscape exploration, learning rate comparison, momentum visualization, optimizer race (SGD vs Adam).
 
 ### Loss Functions
-- **[Cross-Entropy & Softmax — Worked Math](teach/loss-functions/cross-entropy-math.html)** — step-by-step: softmax computation, cross-entropy loss, gradients, parameter update, autoregressive cross-entropy with perplexity, and contrastive loss (CLIP-style).
-- **[Cross-Entropy & Softmax Explorer](teach/loss-functions/index.html)** — adjust logits with sliders, watch softmax probabilities and the -log(p) loss curve respond. Temperature control, gradient visualization, presets for edge cases.
+- **[Cross-Entropy & Softmax — Worked Math](https://klauseduard.github.io/deep-learning-knowledge-base-demo/teach/loss-functions/cross-entropy-math.html)** — step-by-step: softmax computation, cross-entropy loss, gradients, parameter update, autoregressive cross-entropy with perplexity, and contrastive loss (CLIP-style).
+- **[Cross-Entropy & Softmax Explorer](https://klauseduard.github.io/deep-learning-knowledge-base-demo/teach/loss-functions/index.html)** — adjust logits with sliders, watch softmax probabilities and the -log(p) loss curve respond. Temperature control, gradient visualization, presets for edge cases.
 
 ### Activation Functions
-- **[Activation Function Explorer](teach/activation-functions/index.html)** — drag along curves to probe function values and derivatives, compare any two functions side by side, stack 1-30 layers to see how repeated activation crushes or preserves signals.
+- **[Activation Function Explorer](https://klauseduard.github.io/deep-learning-knowledge-base-demo/teach/activation-functions/index.html)** — drag along curves to probe function values and derivatives, compare any two functions side by side, stack 1-30 layers to see how repeated activation crushes or preserves signals.
 
 ### Tensors
-- **[Tensor Fundamentals](teach/tensors/index.html)** — interactive grid visualization of tensor shapes, indexing, reshaping, and broadcasting.
+- **[Tensor Fundamentals](https://klauseduard.github.io/deep-learning-knowledge-base-demo/teach/tensors/index.html)** — interactive grid visualization of tensor shapes, indexing, reshaping, and broadcasting.
 
 ## Reference materials
 
