@@ -85,6 +85,25 @@ _open_questions.md  Unresolved questions across the field
 
 **Reference materials** are look-up resources, not study materials. They support the concept articles without duplicating them.
 
+## How to use
+
+### Concept articles (Markdown)
+
+The concept articles use `[[wiki-links]]` for cross-referencing and embedded Plotly charts for visualizations. To get the full experience:
+
+1. **[Obsidian](https://obsidian.md/)** (free) — open this repository as an Obsidian vault. Wiki-links become clickable, the graph view shows connections between articles, and LaTeX math renders inline.
+2. **[Obsidian Plotly plugin](https://github.com/Dmytro-Shulha/obsidian-plotly)** — install via Obsidian's community plugins to render the embedded charts in the loss-functions and activation-functions articles.
+
+Without Obsidian, the articles are still readable as plain Markdown — `[[wiki-links]]` won't be clickable but the text is clear. The Plotly chart data is visible as YAML blocks.
+
+### Teaching materials (HTML)
+
+The `teach/` directory contains standalone HTML files. Just open them directly in a browser (Firefox, Chrome, etc.) — no server, no build step, no installation. They load fonts and math rendering from CDNs, so an internet connection is needed on first open.
+
+### Reference materials (Markdown)
+
+Plain Markdown with some LaTeX math notation. Readable in any Markdown viewer or text editor; best in Obsidian where the math renders.
+
 ## Built with
 
 The knowledge base was built iteratively using [Claude Code](https://claude.ai/code) — article drafting, review, teaching material generation, and cross-linking were done in conversation.
