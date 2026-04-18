@@ -145,6 +145,8 @@ Plain Markdown with some LaTeX math notation. Readable in any Markdown viewer or
 
 The knowledge base was built iteratively using [Claude Code](https://claude.ai/code) — article drafting, review, teaching material generation, and cross-linking were done in conversation.
 
+Much of the repetitive structure (article templates, teaching material scaffolding, linting, visualization helpers) was encapsulated in a set of personal [Claude Code skills](https://docs.claude.com/en/docs/claude-code/skills) — for example `kb-seed` (generate article drafts from a topic list), `kb-teach` (scaffold interactive teaching materials), `kb-lint` (check article structure), and `kb-viz` (generate diagrams). These skills are not included in this repository — they're personal tooling tailored to one learner's workflow, and they'd need to be rewritten to match someone else's article conventions and design preferences. But the concept of per-domain skills is worth knowing about: a small set of invokable prompts (like `/kb-teach <concept>`) reduces the friction of consistent knowledge base work significantly.
+
 ## License
 
 Content is provided for demonstration purposes. The teaching material HTML files can be opened directly in any modern browser.
